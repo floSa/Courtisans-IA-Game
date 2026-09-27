@@ -19,7 +19,7 @@ Mis à jour le 20/08/2026, après la clôture de la phase 2 et le bouchage des t
 | Documents à lire | [experiences/REVUE_CRITIQUE.md](experiences/REVUE_CRITIQUE.md) (critique, résultats, commandes), puis l'entrée du 27/09 de [06_journal_decisions.md](documentations/06_journal_decisions.md) |
 | Branche | `reprise-iteration-experte` |
 | Méthode | Deux régimes : **exploratoire** dans `experiences/` (arène figée, essais en minutes), **confirmatoire** (pré-inscription + audit croisé) pour ce qu'on veut affirmer |
-| Prochaine marche | Recherche dont les adversaires sont simulés par la politique apprise, distillée dans V (itération experte) ; inférence sur les Espions ; moteur plus rapide |
+| Prochaine marche | Voir [experiences/PISTES.md](experiences/PISTES.md) : d'abord le « greedy probabiliste » (apprendre le statut final des familles), puis les réglages du signal ; le moteur Rust attend ton accord |
 
 L'état ci-dessous est celui du 24/08. Il est conservé tel quel, comme document historique.
 

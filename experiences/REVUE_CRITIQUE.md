@@ -250,6 +250,9 @@ l'itérer.
 
 ## 4. La prochaine marche — réécrite le 27/09 au soir, après les mesures
 
+> Les pistes pour aller plus loin, détaillées et classées, sont dans
+> [PISTES.md](PISTES.md).
+
 Ce qui a été **mesuré** aujourd'hui ordonne les leviers. Dans l'ordre :
 
 1. **Un moteur beaucoup plus rapide — le levier n° 1.** Tout ce qui a marché augmente le
