@@ -321,7 +321,8 @@ Trois versions de la boucle, parce que les deux premières ont échoué, et leur
 |---|---|---|---|
 | v1 | ligue tirée siège par siège (60 % courante, 25 % anciennes, 15 % greedy), fenêtre des 3 dernières générations | **dérive** : gen 1 bat c1b (+0,35) mais recule contre le greedy (+0,169 → +0,118) ; gen 2 **perd** contre gen 1 (−0,053) et tombe à +0,054 contre le greedy. Chaque génération apprenait à exploiter la précédente | `iteration1_derive.jsonl` |
 | v2 | toutes les données gardées (plafond 14 M vues, parties greedy comprises), **gardien** : bat la courante et ne recule pas de plus de 0,03 contre le greedy | gen 1 bat c1b (+0,125) mais **perd contre le greedy** (−0,075) ; rejetée | `iteration2_rejet.jsonl` |
-| v3 | **un contexte par partie** : 30 % contre 2 greedys, 40 % auto-jeu pur, 30 % contre les anciennes versions | voir ci-dessous | `iteration3.jsonl` |
+| v3 | **un contexte par partie** : 30 % contre 2 greedys, 40 % auto-jeu pur, 30 % contre les anciennes versions | gen 1 acceptée (+0,405 contre c1b, +0,159 contre le greedy), gen 2 acceptée à la limite ; puis, gardien corrigé (`iteration4`), **trois rejets** : plateau | `iteration3.jsonl`, `iteration4.jsonl` |
+| v4 | **retours TD(λ = 0,7)** au lieu du gain final seul | **ça repart** : gens 1, 3, 5 acceptées ; contre le greedy +0,148 → +0,220 → +0,247 → **+0,303** | `iteration5.jsonl` |
 
 **La mesure qui explique l'échec de la v2.** Sur les parties entre agents appris, c1b a un R²
 de **−0,12** : il y prédit moins bien qu'une constante. La valeur d'une position dépend
@@ -329,7 +330,43 @@ fortement de **qui sont les adversaires**. Tirée siège par siège, la ligue ne
 contexte « 2 greedys en face » qu'une partie sur 16, alors que c'est celui du juge. Tirée par
 partie, elle le produit trois fois sur dix.
 
-RESULTATS_ITERATION3
+**Le gardien avait lui-même un défaut**, corrigé en cours de route : sa tolérance contre le
+greedy se mesurait par rapport à la politique *courante*, donc elle se cumulait d'une
+génération à l'autre (+0,169 → +0,159 → +0,148, un cliquet vers le bas). Le plancher est
+désormais **le meilleur niveau jamais atteint** moins 0,03, et il faut battre la courante
+d'au moins +0,02.
+
+**Ce qui a débloqué : TD(λ).** Le diagnostic du plateau était le bruit de la cible. Une
+mesure dédiée le confirme (`experiences/capacite.py`) : trois tailles de réseau plafonnent
+au même R² (≈ 0,057) et sur-apprennent dès la 2e époque, **la plus grande faisant pire**.
+5,6 M vues ne portent qu'environ 60 000 issues indépendantes, puisque toutes les vues d'une
+partie partagent le même gain. Avec TD(λ), la cible d'une vue mélange la valeur prédite de
+la vue suivante du même siège et le gain final, comme dans TD-Gammon :
+`G_t = (1 − λ) V(v_{t+1}) + λ G_{t+1}`. La variance chute.
+
+| Génération (TD) | Verdict | Contre 2 greedys | Contre 2 courantes | Contre 2 c1b |
+|---|---|---|---|---|
+| départ (v3 gen 2) | — | +0,148 [+0,090 ; +0,207] | — | — |
+| 1 | acceptée | +0,220 [+0,160 ; +0,278] | +0,045 | +0,343 |
+| 2 | rejetée | +0,184 | +0,011 | +0,289 |
+| 3 | acceptée | +0,247 [+0,191 ; +0,304] | +0,038 | +0,363 |
+| 4 | rejetée | +0,241 | +0,007 | +0,358 |
+| 5 | **acceptée** | **+0,303 [+0,248 ; +0,362]** | +0,057 | **+0,403 [+0,313 ; +0,485]** |
+
+Les 300 donnes contre le greedy sont les **mêmes** à chaque ligne (5 000 000 à 5 000 299) :
+c1b y fait +0,169, et le rejeu de c1b redonne ce chiffre au bit près.
+
+**Deux leviers mesurés, et qui ne marchent pas :**
+
+- **Un réseau plus gros.** Voir ci-dessus.
+- **Une recherche courte au moment de jouer**, soit 1 tour d'adversaires simulés par la
+  politique apprise dans 4 mondes : +0,038, IC [−0,053 ; +0,133], contre la même valeur sans
+  recherche, pour 25 fois plus de calcul. Non établi.
+
+**Le goulot est donc la vitesse du moteur**, qui fixe le nombre de parties par heure.
+`experiences/rapide.py` calcule désormais le tenseur en une passe : 48 µs contre 318 µs pour
+l'officiel, sous charge, égal bit à bit sur 52 181 états et 4 configurations. La boucle
+`iteration6` repart de la gen 5 avec ce moteur et 24 000 parties par génération.
 
 ## 6. Rejouer
 
