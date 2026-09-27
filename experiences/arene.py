@@ -96,9 +96,13 @@ def main(argv=None):
         "victoire_seule": statistics.fmean(victoires),
         "ecart_score_moyen": statistics.fmean(ecarts),
         "par_siege": par_siege,
+        "depart": a.depart,
+        # Une valeur par donne, dans l'ordre : permet l'ecart APPARIE entre deux agents
+        # mesures sur les memes donnes (experiences.apparie).
+        "par_donne": par_donne,
         "secondes": time.time() - t0,
     }
-    print(json.dumps(sortie, indent=1))
+    print(json.dumps({k: v for k, v in sortie.items() if k != "par_donne"}, indent=1))
     if a.sortie:
         with open(a.sortie, "a") as f:
             f.write(json.dumps(sortie) + "\n")
