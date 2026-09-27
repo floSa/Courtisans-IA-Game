@@ -56,3 +56,48 @@ def fin_de_partie(rng: random.Random, chemin: str, tours_fin: int = 1, nb_mondes
         return rng.choice([a for a, v in totaux.items() if v == m])
 
     return pol
+
+
+def greedy_departage(rng: random.Random, chemin: str):
+    """Le greedy, dont les EGALITES sont departagees par le reseau au lieu du hasard.
+
+    Mesure ce que rapporte le seul departage : le greedy a plusieurs coups optimaux dans
+    93 % des premieres decisions et plus d'une fois sur deux ensuite
+    (`experiences/ressemblance.py`). Hors egalite, il joue exactement comme le greedy.
+    """
+    appris = agent_valeur(rng, chemin)
+    from experiences.rapide import tenseur_rapide
+    from experiences.valeur import _charger
+
+    net = _charger(chemin)
+
+    def pol(etat: State) -> int:
+        moi = etat.current_player()
+        legales = etat.legal_actions()
+        if len(legales) == 1:
+            return legales[0]
+        valeurs = greedy.evaluer_actions(percevoir(etat, moi))
+        m = max(valeurs.values())
+        optimaux = [a for a, v in valeurs.items() if v == m]
+        if len(optimaux) == 1:
+            return optimaux[0]
+        if etat.phase() is Phase.CIBLAGE:
+            # Au ciblage, l'apres-coup sur l'etat reel revelerait un dos tue : on passe par
+            # l'agent aveugle, restreint aux coups optimaux du greedy.
+            choix = appris(etat)
+            return choix if choix in optimaux else rng.choice(optimaux)
+        import numpy as np
+        import torch
+
+        vues = []
+        for a in optimaux:
+            s = etat.clone()
+            appliquer(s, a)
+            vues.append(tenseur_rapide(s, moi))
+        with torch.no_grad():
+            p = net(torch.from_numpy(np.asarray(vues, dtype=np.float32)))
+        score = (p[:, 0] + 0.05 * p[:, 1]).tolist()
+        mm = max(score)
+        return rng.choice([a for a, x in zip(optimaux, score, strict=True) if x == mm])
+
+    return pol
