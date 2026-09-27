@@ -275,6 +275,7 @@ def entrainer(depart: str, fichiers: list[Path], sortie: str, epoques=3, lot=409
         td = lam < 1.0 and "E" in b.files
         G = cibles_td(b, net, lam, dev) if td else b["G"]
         avec_td.append(td)
+        cibles_dernier = G  # la derniere iteration laisse ici les cibles du fichier le plus recent
         Xa[pos : pos + q] = X[idx]
         Ya[pos : pos + q, 0] = G[idx]
         Ya[pos : pos + q, 1] = M[idx] / 5.0
@@ -284,6 +285,12 @@ def entrainer(depart: str, fichiers: list[Path], sortie: str, epoques=3, lot=409
     coupe_d = tailles[-1]
     Xv = torch.tensor(dernier["X"][coupe_d:], dtype=torch.float32, device=dev)
     Yv = torch.tensor(dernier["G"][coupe_d:], dtype=torch.float32, device=dev)
+    # L'arret precoce se juge sur les MEMES cibles que l'apprentissage : TD si le fichier le
+    # plus recent en a, gain final sinon. Juger un apprentissage TD sur le gain final
+    # penalisait precisement ce qu'on cherche a apprendre -- iteration7/gen_01 a rendu les
+    # poids de depart, a l'identique, pour cette raison.
+    Yv_cible = torch.tensor(np.asarray(cibles_dernier[coupe_d:]), dtype=torch.float32,
+                            device=dev)
     Xt = torch.tensor(Xa, dtype=torch.float16, device=dev)
     Yt = torch.tensor(Ya, dtype=torch.float32, device=dev)
     del Xa, Ya
@@ -294,12 +301,18 @@ def entrainer(depart: str, fichiers: list[Path], sortie: str, epoques=3, lot=409
     def r2():
         net.eval()
         with torch.no_grad():
-            mse = float(((net(Xv)[:, 0] - Yv) ** 2).mean())
+            p = net(Xv)[:, 0]
+            mse = float(((p - Yv) ** 2).mean())
+            mse_cible = float(((p - Yv_cible) ** 2).mean())
         net.train()
-        return 1 - mse / var_v
+        return 1 - mse / var_v, mse_cible
 
+    # Le candidat est la meilleure des epoques ENTRAINEES, jamais les poids de depart :
+    # c'est le gardien, en parties, qui juge s'il vaut mieux que la courante. Garder les poids
+    # de depart faisait jouer la courante contre elle-meme (iteration7_poids_inchanges).
     historique = [r2()]
-    meilleur, meilleurs_poids = historique[0], {k: v.clone() for k, v in net.state_dict().items()}
+    meilleur = float("inf")
+    meilleurs_poids = None
     for _ in range(epoques):
         perm = torch.randperm(n, device=dev)
         for i in range(0, n - lot + 1, lot):
@@ -309,14 +322,17 @@ def entrainer(depart: str, fichiers: list[Path], sortie: str, epoques=3, lot=409
             loss.backward()
             opt.step()
         historique.append(r2())
-        if historique[-1] > meilleur:
-            meilleur = historique[-1]
+        if historique[-1][1] < meilleur:
+            meilleur = historique[-1][1]
             meilleurs_poids = {k: v.clone() for k, v in net.state_dict().items()}
     net.load_state_dict(meilleurs_poids)
     torch.save({k: v.cpu() for k, v in net.state_dict().items()}, sortie)
     return {"echantillons": n, "quotas": quotas, "cibles_td": avec_td, "lambda": lam,
-            "r2_validation": historique,
-            "r2_retenu": meilleur}
+            "r2_validation": [h[0] for h in historique],
+            "mse_cible_validation": [h[1] for h in historique],
+            "epoque_retenue": min(range(1, len(historique)), key=lambda i: historique[i][1]),
+            "r2_retenu": historique[min(range(1, len(historique)),
+                                        key=lambda i: historique[i][1])][0]}
 
 
 def juger(ex, agent: str, adversaire: str, depart: int, donnes: int):
