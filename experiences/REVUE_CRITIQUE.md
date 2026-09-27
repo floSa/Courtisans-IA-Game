@@ -384,6 +384,11 @@ jugé sur le gain final alors que l'apprentissage visait des cibles TD, avait re
 de départ à l'identique (`iteration7_poids_inchanges.jsonl`). Corrigé, et c'est devenu un
 contrôle gratuit : la même IA contre elle-même donne +0,018 [−0,029 ; +0,066].
 
+**En cours (lancé le 27/09 à 22 h, 2 h 30, sans surveillance) :** `iteration8`, TD(λ = 0,7) à
+partir de `iteration7/gen_02`, **sans les vieilles données Monte-Carlo** : seulement les
+18 fichiers qui portent des épisodes, donc des cibles TD. Suivi :
+`uv run python -m experiences.suivi experiences/resultats/iteration8.jsonl`.
+
 ### 5.2 Les intuitions de l'auteur du jeu, mises à l'épreuve (27/09, soir)
 
 L'auteur voit la bonne stratégie comme **« un greedy, mais stratégique en fin de partie,
