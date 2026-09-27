@@ -132,3 +132,27 @@ def test_CARACTERISATION_le_tenseur_officiel_ne_dit_pas_qui_est_la_cible_i():
             assert tenseur(m, j) == tenseur(etat, j)
             aveugles += 1
     assert aveugles >= 10
+
+
+def test_cibles_td_lambda_1_redonne_monte_carlo_et_respecte_les_episodes():
+    """Les retours TD(lambda) de `experiences.iteration` : a lambda = 1 ils valent le gain
+    final ; a lambda < 1 la vue terminale garde le gain reel, les autres s'en ecartent, et
+    une vue augmentee recoit exactement la cible de son originale."""
+    import numpy as np
+
+    from experiences.iteration import _jouer_lot, cibles_td
+    from experiences.valeur import V as Reseau
+
+    X, G, M, E, T, A = _jouer_lot((V1B, [], 9_400_000, 3, 0.05, 1, 0.3, 0.4))
+    b = {"X": X, "G": G, "M": M, "E": E, "T": T, "A": A}
+    net = Reseau()
+    net.load_state_dict(torch.load(V1B, map_location="cpu"))
+    dev = torch.device("cpu")
+    assert np.allclose(cibles_td(b, net, 1.0, dev), G)
+    c = cibles_td(b, net, 0.7, dev)
+    derniers = [np.flatnonzero(E == e)[-1] for e in np.unique(E)]
+    assert np.allclose(c[derniers], G[derniers])
+    assert not np.allclose(c, G)
+    aug = np.flatnonzero(A == 1)
+    assert len(aug) > 0 and np.array_equal(c[aug], c[aug - 1])
+    assert np.all(A[aug - 1] == 0) and np.all(E[aug] == E[aug - 1]) and np.all(T[aug] == T[aug - 1])

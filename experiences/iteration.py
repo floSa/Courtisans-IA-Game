@@ -43,6 +43,14 @@ depend fortement des adversaires. Tiree siege par siege, la ligue ne mettait « 
 face » qu'une partie sur 16. `_composer` tire desormais un CONTEXTE par partie : 30 % contre
 2 greedys, 40 % d'auto-jeu pur, 30 % contre les anciennes versions acceptees.
 
+Version 4 -- 17 h 30 : retours TD(lambda), `--lam`
+---------------------------------------------------
+Apres deux rejets de suite (plateau), le diagnostic est le bruit de la cible : un gain final
+predit a R2 = 0,04-0,10. Comme TD-Gammon, la cible d'une vue melange la valeur predite de la
+vue SUIVANTE du meme siege et le gain final, `G_t = (1-lam) V(v_{t+1}) + lam G_{t+1}` : la
+variance chute, au prix d'un biais porte par V. Les fichiers d'avant (sans episode) restent
+en Monte-Carlo.
+
 Lancer :
     COURTISANS_INSTANCE=complete uv run python -m experiences.iteration --duree-max-h 2 \\
         --donnees-initiales <parties greedy .npz> ...
@@ -122,21 +130,25 @@ def _composer(rng: random.Random, courant: str, passes: list[str], part_greedy: 
 def _jouer_lot(args):
     courant, passes, debut, n, eps, augment, part_greedy, part_self = args
     moteur = Engine(CONFIG)
-    X, G, M = [], [], []
+    X, G, M, E, T, A = [], [], [], [], [], []
     for donne in range(debut, debut + n):
         rng = random.Random(donne)
         tenus = _composer(rng, courant, passes, part_greedy, part_self)
         apprenants = [j for j, q in enumerate(tenus) if q == courant]
         pols = [_politique(q, random.Random(rng.random())) for q in tenus]
         etat = moteur.reset(donne)
-        vues: list[tuple[int, list[float]]] = []
+        # (siege, vue, pas, augmentee) : le pas et l'episode servent aux retours TD(lambda) ;
+        # une vue augmentee suit TOUJOURS son originale, et en partage la cible.
+        vues: list[tuple[int, list[float], int, int]] = []
+        pas = 0
         while True:
             for j in apprenants:
-                vues.append((j, tenseur_rapide(etat, j)))
+                vues.append((j, tenseur_rapide(etat, j), pas, 0))
                 for _ in range(augment):
                     perm = list(range(CONFIG.familles))
                     rng.shuffle(perm)
-                    vues.append((j, tenseur_rapide(permuter_familles(etat, perm), j)))
+                    vues.append((j, tenseur_rapide(permuter_familles(etat, perm), j), pas, 1))
+            pas += 1
             if etat.is_terminal():
                 break
             joueur = etat.current_player()
@@ -147,14 +159,20 @@ def _jouer_lot(args):
             appliquer(etat, action)
         gains = etat.returns()
         scores = etat.scores()
-        for j, vue in vues:
+        for j, vue, t, aug in vues:
             X.append(vue)
             G.append(gains[j])
             M.append(scores[j] - max(v for k, v in scores.items() if k != j))
+            E.append(4 * donne + j)
+            T.append(t)
+            A.append(aug)
     return (
         np.asarray(X, np.float16).reshape(-1, ENTREE),
         np.asarray(G, np.float32),
         np.asarray(M, np.float32),
+        np.asarray(E, np.int64),
+        np.asarray(T, np.int16),
+        np.asarray(A, np.int8),
     )
 
 
@@ -166,13 +184,48 @@ def generer(ex, courant, passes, debut, parties, eps, augment, sortie, part_gree
          part_self)
         for i in range(0, parties, taille)
     ]
-    xs, gs, ms = [], [], []
-    for X, G, M in ex.map(_jouer_lot, taches):
-        xs.append(X)
-        gs.append(G)
-        ms.append(M)
-    np.savez(sortie, X=np.concatenate(xs), G=np.concatenate(gs), M=np.concatenate(ms))
-    return sum(len(g) for g in gs)
+    lots = list(ex.map(_jouer_lot, taches))
+    np.savez(sortie, **{cle: np.concatenate([lot[i] for lot in lots])
+                        for i, cle in enumerate("XGMETA")})
+    return sum(len(lot[1]) for lot in lots)
+
+
+def cibles_td(b, net, lam: float, dev) -> np.ndarray:
+    """Retours TD(lambda) du gain, calcules avec `net` (les poids de depart), par episode.
+
+    G_t = (1 - lam) * V(v_{t+1}) + lam * G_{t+1}, et au dernier pas -- la vue terminale --
+    la cible est le gain reel. `lam = 1` redonne le retour de Monte-Carlo. Une vue augmentee
+    recoit la cible de son originale, qui la precede immediatement dans le fichier.
+    """
+    G, E, T, A = b["G"], b["E"], b["T"], b["A"]
+    n = len(G)
+    orig = np.flatnonzero(A == 0)
+    X = b["X"]
+    preds = np.empty(len(orig), np.float32)
+    net.eval()
+    with torch.no_grad():
+        for i in range(0, len(orig), 65536):
+            morceau = torch.tensor(X[orig[i : i + 65536]], dtype=torch.float32, device=dev)
+            preds[i : i + 65536] = net(morceau)[:, 0].float().cpu().numpy()
+    net.train()
+    ordre = np.lexsort((T[orig], E[orig]))
+    e = E[orig][ordre]
+    g = G[orig][ordre]
+    v = preds[ordre]
+    dernier = np.ones(len(e), bool)
+    dernier[:-1] = e[1:] != e[:-1]
+    v = np.where(dernier, g, v).tolist()
+    dernier = dernier.tolist()
+    g = g.tolist()
+    cible = [0.0] * len(e)
+    for i in range(len(e) - 1, -1, -1):
+        cible[i] = g[i] if dernier[i] else (1 - lam) * v[i + 1] + lam * cible[i + 1]
+    cible_orig = np.empty(len(orig), np.float32)
+    cible_orig[ordre] = cible
+    par_ligne = np.full(n, -1, np.int64)
+    par_ligne[orig] = np.arange(len(orig))
+    par_ligne = np.maximum.accumulate(par_ligne)
+    return cible_orig[par_ligne]
 
 
 def _quotas(tailles: list[int], plafond: int) -> list[int]:
@@ -200,7 +253,7 @@ def _quotas(tailles: list[int], plafond: int) -> list[int]:
 
 
 def entrainer(depart: str, fichiers: list[Path], sortie: str, epoques=3, lot=4096, lr=5e-4,
-              plafond=14_000_000, graine=0):
+              plafond=14_000_000, graine=0, lam=1.0):
     """Part des poids `depart`. Validation : les 5 % finaux du fichier le plus recent
     (parties contigues, donc d'autres parties que celles de l'apprentissage)."""
     dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -209,12 +262,19 @@ def entrainer(depart: str, fichiers: list[Path], sortie: str, epoques=3, lot=409
     tailles = [len(b["G"]) for b in blocs]
     tailles[-1] = int(0.95 * tailles[-1])
     quotas = _quotas(tailles, plafond)
+    net = V()
+    net.load_state_dict(torch.load(depart, map_location="cpu"))
+    net = net.to(dev)
+    avec_td = []
     Xa = np.empty((sum(quotas), ENTREE), np.float16)
     Ya = np.empty((sum(quotas), 2), np.float32)
     pos = 0
     for b, taille, q in zip(blocs, tailles, quotas, strict=True):
         idx = np.sort(rng.choice(taille, q, replace=False)) if q < taille else np.arange(q)
-        X, G, M = b["X"], b["G"], b["M"]
+        X, M = b["X"], b["M"]
+        td = lam < 1.0 and "E" in b.files
+        G = cibles_td(b, net, lam, dev) if td else b["G"]
+        avec_td.append(td)
         Xa[pos : pos + q] = X[idx]
         Ya[pos : pos + q, 0] = G[idx]
         Ya[pos : pos + q, 1] = M[idx] / 5.0
@@ -227,9 +287,6 @@ def entrainer(depart: str, fichiers: list[Path], sortie: str, epoques=3, lot=409
     Xt = torch.tensor(Xa, dtype=torch.float16, device=dev)
     Yt = torch.tensor(Ya, dtype=torch.float32, device=dev)
     del Xa, Ya
-    net = V()
-    net.load_state_dict(torch.load(depart, map_location="cpu"))
-    net = net.to(dev)
     opt = torch.optim.AdamW(net.parameters(), lr=lr, weight_decay=1e-4)
     n = len(Xt)
     var_v = float(Yv.var())
@@ -257,7 +314,8 @@ def entrainer(depart: str, fichiers: list[Path], sortie: str, epoques=3, lot=409
             meilleurs_poids = {k: v.clone() for k, v in net.state_dict().items()}
     net.load_state_dict(meilleurs_poids)
     torch.save({k: v.cpu() for k, v in net.state_dict().items()}, sortie)
-    return {"echantillons": n, "quotas": quotas, "r2_validation": historique,
+    return {"echantillons": n, "quotas": quotas, "cibles_td": avec_td, "lambda": lam,
+            "r2_validation": historique,
             "r2_retenu": meilleur}
 
 
@@ -299,6 +357,8 @@ def main():
                     help="premiere donne d'auto-jeu ; a decaler a chaque reprise")
     ap.add_argument("--passes-initiales", nargs="*", default=[],
                     help="modeles deja acceptes, remis dans la ligue a la reprise")
+    ap.add_argument("--lam", type=float, default=1.0,
+                    help="lambda des retours TD ; 1 = Monte-Carlo (v1 a v3)")
     ap.add_argument("--part-greedy", type=float, default=0.3)
     ap.add_argument("--part-self", type=float, default=0.4)
     ap.add_argument("--workers", type=int, default=11)
@@ -334,7 +394,8 @@ def main():
             fichiers.append(donnees)
             t_gen = time.time() - debut_gen
             candidat = str(modeles / f"gen_{k:02d}.pt")
-            appr = entrainer(courant, fichiers, candidat, plafond=a.max_echantillons, graine=k)
+            appr = entrainer(courant, fichiers, candidat, plafond=a.max_echantillons, graine=k,
+                             lam=a.lam)
             t_appr = time.time() - debut_gen - t_gen
             contre_greedy = juger(ex, candidat, "greedy", 5_000_000, a.donnes_greedy)
             contre_courant = juger(ex, candidat, courant, 5_800_000 + 1000 * k, a.donnes_ligue)
