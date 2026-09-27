@@ -1,0 +1,19 @@
+{
+ "agent": "experiences.valeur:pimc_valeur:chemin='experiences/modeles/iteration5/gen_01.pt',nb_mondes=4,adversaires='valeur'",
+ "adv": "experiences.valeur:agent_valeur:chemin='experiences/modeles/iteration5/gen_01.pt'",
+ "donnes": 100,
+ "parties": 300,
+ "gain_moyen": 0.03833333333333333,
+ "ic99": [
+  -0.05333333333333333,
+  0.1325
+ ],
+ "victoire_seule": 0.30666666666666664,
+ "ecart_score_moyen": -1.3033333333333332,
+ "par_siege": {
+  "0": -0.0825,
+  "1": 0.0625,
+  "2": 0.135
+ },
+ "secondes": 2103.2101681232452
+}
