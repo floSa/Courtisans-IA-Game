@@ -35,6 +35,14 @@ correctifs :
   contre 2 x courante) ET ne recule pas de plus de `--tolerance` contre le greedy ;
 - une ligue plus large : courante 50 %, anciennes acceptees 25 %, greedy 25 %.
 
+Version 3 -- 16 h 40 : la composition se tire PAR PARTIE
+--------------------------------------------------------
+La v2, gen 1 : bat c1b (+0,125) mais PERD contre le greedy (-0,075), rejetee par le gardien.
+Mesure qui l'explique : c1b a un R2 de -0,12 sur les parties entre agents appris -- la valeur
+depend fortement des adversaires. Tiree siege par siege, la ligue ne mettait « 2 greedys en
+face » qu'une partie sur 16. `_composer` tire desormais un CONTEXTE par partie : 30 % contre
+2 greedys, 40 % d'auto-jeu pur, 30 % contre les anciennes versions acceptees.
+
 Lancer :
     COURTISANS_INSTANCE=complete uv run python -m experiences.iteration --duree-max-h 2 \\
         --donnees-initiales <parties greedy .npz> ...
@@ -90,23 +98,34 @@ def _politique(qui: str, rng: random.Random):
     return agent_valeur(rng, qui)
 
 
+def _composer(rng: random.Random, courant: str, passes: list[str], part_greedy: float,
+              part_self: float) -> list[str]:
+    """La composition d'UNE partie, tiree d'un bloc -- jamais siege par siege.
+
+    La valeur d'une position depend de qui sont les adversaires (c1b : R2 = -0,12 sur les
+    parties entre agents appris). Tirer siege par siege rendait « 2 greedys en face » rare
+    (1 partie sur 16), alors que c'est le contexte du juge. D'ou trois contextes nets :
+    contre 2 greedys, auto-jeu pur, contre les anciennes versions acceptees.
+    """
+    u = rng.random()
+    if u < part_greedy:
+        tenus = ["greedy"] * CONFIG.joueurs
+        tenus[rng.randrange(CONFIG.joueurs)] = courant
+    elif u < part_greedy + part_self or not passes:
+        tenus = [courant] * CONFIG.joueurs
+    else:
+        tenus = [rng.choice(passes) for _ in range(CONFIG.joueurs)]
+        tenus[rng.randrange(CONFIG.joueurs)] = courant
+    return tenus
+
+
 def _jouer_lot(args):
-    courant, passes, debut, n, eps, augment = args
+    courant, passes, debut, n, eps, augment, part_greedy, part_self = args
     moteur = Engine(CONFIG)
     X, G, M = [], [], []
     for donne in range(debut, debut + n):
         rng = random.Random(donne)
-        tenus = []
-        for _ in range(CONFIG.joueurs):
-            u = rng.random()
-            if u < 0.50 or (u < 0.75 and not passes):
-                tenus.append(courant)
-            elif u < 0.75:
-                tenus.append(rng.choice(passes))
-            else:
-                tenus.append("greedy")
-        if courant not in tenus:
-            tenus[rng.randrange(CONFIG.joueurs)] = courant
+        tenus = _composer(rng, courant, passes, part_greedy, part_self)
         apprenants = [j for j, q in enumerate(tenus) if q == courant]
         pols = [_politique(q, random.Random(rng.random())) for q in tenus]
         etat = moteur.reset(donne)
@@ -139,10 +158,12 @@ def _jouer_lot(args):
     )
 
 
-def generer(ex, courant, passes, debut, parties, eps, augment, sortie):
+def generer(ex, courant, passes, debut, parties, eps, augment, sortie, part_greedy=0.3,
+            part_self=0.4):
     taille = 100
     taches = [
-        (courant, passes, debut + i, min(taille, parties - i), eps, augment)
+        (courant, passes, debut + i, min(taille, parties - i), eps, augment, part_greedy,
+         part_self)
         for i in range(0, parties, taille)
     ]
     xs, gs, ms = [], [], []
@@ -270,6 +291,8 @@ def main():
     ap.add_argument("--augment", type=int, default=1)
     ap.add_argument("--max-echantillons", type=int, default=14_000_000)
     ap.add_argument("--tolerance", type=float, default=0.03)
+    ap.add_argument("--part-greedy", type=float, default=0.3)
+    ap.add_argument("--part-self", type=float, default=0.4)
     ap.add_argument("--workers", type=int, default=11)
     ap.add_argument("--donnes-greedy", type=int, default=300)
     ap.add_argument("--donnes-ligue", type=int, default=150)
@@ -298,7 +321,7 @@ def main():
             debut_gen = time.time()
             donnees = donnees_dir / f"gen_{k:02d}.npz"
             n = generer(ex, courant, acceptees[:-1], 8_500_000 + 100_000 * k,
-                        a.parties, a.eps, a.augment, donnees)
+                        a.parties, a.eps, a.augment, donnees, a.part_greedy, a.part_self)
             fichiers.append(donnees)
             t_gen = time.time() - debut_gen
             candidat = str(modeles / f"gen_{k:02d}.pt")
