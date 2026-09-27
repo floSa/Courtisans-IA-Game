@@ -248,63 +248,36 @@ l'itérer.
 - **torch n'est pas dans `pyproject.toml`** : un `uv sync` le retire. Le PPO n'est plus
   reproductible depuis le lock. À ajouter dans un groupe `ia`.
 
-## 4. La prochaine marche
+## 4. La prochaine marche — réécrite le 27/09 au soir, après les mesures
 
-Dans l'ordre. Chaque étape se mesure sur l'arène en quelques minutes.
+Ce qui a été **mesuré** aujourd'hui ordonne les leviers. Dans l'ordre :
 
-### 4.1 Tout de suite : l'itération experte (« Expert Iteration » / AlphaZero pour cartes)
-
-C'est la voie éprouvée, et chacun de ses morceaux marche déjà séparément :
-
-```
-recherche (PIMC ou ISMCTS)  ──joue──►  parties d'auto-jeu
-        ▲                                      │
-        │ évaluation des feuilles              │ cibles : gain final
-        │ + politique de rollout               ▼   (+ visites de la recherche)
-   réseau V(après-coup)  ◄──apprend──  données
-```
-
-1. **Dans la recherche, simuler les adversaires par l'agent de valeur, pas par le greedy.**
-   C'est la leçon du tableau 2.2 : une recherche qui simule le greedy bat le greedy et fait
-   jeu égal avec tout le reste. `experiences.valeur.pimc_valeur` est déjà tronquée à un tour
-   et notée par V : il reste à y remplacer `greedy.choisir` par l'agent de valeur, **en
-   regroupant les évaluations du réseau par lot** sur tous les mondes. En Python pur, une
-   évaluation coûte ~10 ms ; il faudra la vectoriser pour tenir le budget.
-2. **Apprendre V sur les parties jouées par la recherche**, et plus sur celles du greedy.
-   C'est la boucle d'amélioration : la recherche améliore la politique, et le réseau
-   distille la recherche. Juger chaque génération contre la **précédente** et contre le
-   greedy, jamais contre le seul greedy.
-3. **Ajouter une tête de politique sur les après-coups** : `score(état, action) = f(vue après
-   l'action)`, et non 24 logits. Elle sert de prior à ISMCTS (façon PUCT) et remplace le
-   greedy en rollout.
-
-### 4.2 Ensuite : ce qui manque pour « digne de ce nom »
-
-- **Inférence sur les Espions.** La détermination tire aujourd'hui les dos **uniformément**.
-  Or un joueur pose un Espion là où il l'arrange. Pondérer les mondes par la vraisemblance
-  des coups adverses sous le modèle de politique est le gain classique du PIMC au Skat et au
-  Bridge.
-- **Les données.** v1 a sur-appris dès la 3e époque avec 40 000 parties : les nœuds d'une
-  même partie sont corrélés. Il faut plus de parties et moins d'époques. La génération est
-  bon marché, environ 150 parties/s en greedy sur 11 cœurs.
-- **La symétrie des familles** (dette n° 1). Avec l'après-coup, la canonicalisation devient
-  simple : on ne traduit plus aucune action, on permute seulement la vue. C'est une
-  augmentation de données gratuite, ×24 à 4 familles.
-- **Le jeu complet** (90 cartes, 3 joueurs, 10 tours). L'agent de valeur y gagne déjà
-  (§2.3), et les outils le prennent en charge (`COURTISANS_INSTANCE=complete`). Je suggère
-  d'y **basculer tôt** : l'instance réduite n'a que 12 poses par partie, alors que le vrai
-  jeu, celui où les alliances et les retournements longs existent, en a 30.
-- **La vitesse du moteur.** `tenseur()` et `clone()` dominent le coût. Un moteur vectorisé
-  (NumPy), ou un portage du cœur en Rust/C++ derrière la même suite de conformité, est ce
-  qui permettra des millions de parties. La suite de 1 301 tests (tous verts le 27/09) est précisément ce qui
-  rend ce portage sûr.
-
-### 4.3 Et changer le juge, un peu
-
-Garder le gain moyen contre deux greedys comme **plancher**. Y ajouter une **ligue** : PIMC-24,
-les versions précédentes, et un classement de type Elo/TrueSkill à 3 joueurs. v2 bat v1
-tout en faisant moins bien que v1 contre le greedy : à 3 joueurs, un seul adversaire ne
-suffit pas à ordonner les agents.
+1. **Un moteur beaucoup plus rapide — le levier n° 1.** Tout ce qui a marché augmente le
+   nombre de parties utiles : TD(λ), 60 000 parties au lieu de 15 000 (+0,076 → +0,169),
+   débit doublé. Tout ce qui n'a pas marché (réseau plus gros, recherche courte) bute sur le
+   bruit ou sur le coût. Le moteur Python plafonne à environ 55 parties/s sur 11 cœurs.
+   **Porter le cœur (règles + tenseur) en Rust derrière pyo3**, ou en code vectorisé, et le
+   valider par la suite de conformité existante : le dépôt est déjà conçu pour rejouer
+   C1–C18 sur plusieurs moteurs (`COURTISANS_MOTEUR`), et `experiences/test_rapide.py`
+   montre comment exiger l'égalité bit à bit. Un facteur 20 à 50 est réaliste : des millions
+   de parties par heure, au lieu de 200 000.
+2. **Une recherche profonde, une fois le moteur rapide.** La recherche à 1 tour n'apporte
+   rien de mesurable (+0,038 NS) ; une recherche **jusqu'à la fin** (PIMC ou ISMCTS avec la
+   politique apprise en rollout) coûte trop cher en Python. Avec un moteur rapide, c'est la
+   vraie **itération experte** : la recherche joue, le réseau distille la recherche.
+3. **Régler TD(λ).** λ = 0,7 a débloqué le plateau ; λ = 0,5 est en cours (`iteration7`).
+   À explorer ensuite : λ plus bas, et le retrait des vieilles données Monte-Carlo, qui
+   diluent les cibles TD.
+4. **Modéliser l'adversaire.** Mesuré : la valeur d'une position dépend fortement de qui
+   joue en face (R² de c1b à −0,12 hors de son contexte). Un humain n'est ni un greedy ni
+   notre IA. Donner au réseau des indices sur le style des adversaires, observés pendant la
+   partie (ce qu'ils ont posé où), est la suite logique.
+5. **Inférence sur les Espions.** Les mondes simulés tirent les dos uniformément ; les
+   pondérer par la vraisemblance des coups adverses est le gain classique du PIMC au Bridge
+   et au Skat. Ne vaut qu'avec la recherche du point 2.
+6. **Le juge.** Garder la ligue et le tournoi (`experiences/tournoi.py`) comme juges ;
+   remplacer, dans le gardien, le plancher « meilleur niveau atteint », biaisé vers le haut
+   (malédiction du gagnant), par une remesure de la courante sur des donnes neuves.
 
 ## 5. Suite du 27/09 après-midi : la boucle d'auto-jeu sur le jeu complet
 
