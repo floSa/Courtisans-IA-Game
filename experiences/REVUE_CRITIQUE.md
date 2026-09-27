@@ -378,7 +378,65 @@ Contre 2 greedys, sur 400 donnes (5 000 000 à 5 000 399), soit 1 200 parties : 
 mis à sa place, sur les mêmes donnes, en gagne seul 28,5 %. Écart de score moyen : **+0,56
 point** pour elle, −2,39 pour le greedy à sa place.
 
-**En cours :** `iteration7`, même boucle avec **λ = 0,5**, à partir de `meilleur.pt`.
+**`iteration7`** (λ = 0,5, à partir de `meilleur.pt`) : gen 2 acceptée (+0,039 contre
+it6/gen_06), gens 1, 3, 4, 5 rejetées. Plateau. Un faux essai au passage : l'arrêt précoce,
+jugé sur le gain final alors que l'apprentissage visait des cibles TD, avait rendu les poids
+de départ à l'identique (`iteration7_poids_inchanges.jsonl`). Corrigé, et c'est devenu un
+contrôle gratuit : la même IA contre elle-même donne +0,018 [−0,029 ; +0,066].
+
+### 5.2 Les intuitions de l'auteur du jeu, mises à l'épreuve (27/09, soir)
+
+L'auteur voit la bonne stratégie comme **« un greedy, mais stratégique en fin de partie,
+selon les cartes qui restent »**. Il pointe aussi les **égalités du greedy**, les
+**Espions qui sèment le doute** et les **familles perdues qu'il ne faut pas chercher à
+sauver**. Quatre mesures.
+
+**1. Où l'IA s'écarte-t-elle du greedy ?** (`experiences/ressemblance.py`, IA contre
+2 greedys, 40 donnes, 1 200 décisions de pose)
+
+| Tours restants | Le greedy a une égalité | L'IA joue un coup optimal pour le greedy | Points immédiats cédés |
+|---:|---:|---:|---:|
+| 10 (début) | 93 % | 48 % | 0,9 |
+| 9 à 4 | 55 à 78 % | 16 à 24 % | 1,5 à 2,6 |
+| 3 à 1 (fin) | 53 à 60 % | 38 à 48 % | 1,4 à 1,6 |
+
+L'IA s'écarte le plus en **milieu** de partie, en y sacrifiant environ 2 points immédiats
+par tour. En fin de partie, elle se rapproche du greedy : le score immédiat y devient
+presque le score final.
+
+**2. Le départage des égalités.** `greedy_departage` est le greedy, dont les seules égalités
+sont départagées par le réseau. Écarts **appariés** sur 200 donnes contre 2 greedys
+(`experiences/apparie.py`) :
+
+| | Écart | IC 99 % |
+|---|---:|---|
+| greedy + départage, moins greedy | **+0,188** | [+0,102 ; +0,273] |
+| IA complète, moins greedy + départage | **+0,111** | [+0,015 ; +0,205] |
+| IA complète, moins greedy | +0,299 | [+0,204 ; +0,394] |
+
+**Environ 60 % de l'avance de l'IA vient du départage des égalités, et 40 % de ses écarts
+volontaires.** Les deux sont établis.
+
+**3. Le calcul de fin de partie** (`experiences/fin_de_partie.py`). L'IA apprise joue, puis
+sur son dernier tour elle simule chaque coup **jusqu'au bout** dans N mondes compatibles
+avec ce qu'elle sait.
+
+| Variante | Adversaires | Gain | IC 99 % |
+|---|---|---:|---|
+| 1 tour, 16 mondes, simulation par l'IA | 2 greedys | +0,313 (IA seule : +0,272, mêmes donnes) | — |
+| 1 tour, 16 mondes, simulation par le greedy | 2 × meilleur | +0,004 | [−0,056 ; …] |
+| 1 tour, 16 mondes, simulation par l'IA | 2 × meilleur | +0,050 | [−0,005 ; …] |
+| 2 tours, 16 mondes | 2 × meilleur | +0,050 (apparié au précédent : 0,000) | — |
+| **1 tour, 32 mondes** | **2 × meilleur** | **+0,088** | **[+0,034 ; …]** |
+| 1 tour, 64 mondes | 2 × meilleur | RESULTAT_64 | |
+
+Le calcul de fin de partie **aide quand il simule correctement les adversaires**, et
+d'autant plus qu'on simule de mondes. L'étendre à deux tours n'apporte rien.
+
+**4. Bluffer et semer le doute.** Pas mesuré, mais une conséquence est sûre : **on ne peut
+pas bluffer le greedy**, qui compte un dos pour zéro. Le bluff ne peut s'apprendre qu'en
+auto-jeu, contre des adversaires qui réagissent aux Espions. C'est une raison de plus de
+garder l'auto-jeu dans la ligue.
 
 ## 6. Rejouer
 
