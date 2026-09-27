@@ -428,10 +428,12 @@ avec ce qu'elle sait.
 | 1 tour, 16 mondes, simulation par l'IA | 2 × meilleur | +0,050 | [−0,005 ; …] |
 | 2 tours, 16 mondes | 2 × meilleur | +0,050 (apparié au précédent : 0,000) | — |
 | **1 tour, 32 mondes** | **2 × meilleur** | **+0,088** | **[+0,034 ; …]** |
-| 1 tour, 64 mondes | 2 × meilleur | RESULTAT_64 | |
+| 1 tour, 64 mondes | 2 × meilleur | +0,076 (apparié à 32 mondes : −0,013 [−0,049 ; +0,023]) | [+0,021 ; …] |
 
-Le calcul de fin de partie **aide quand il simule correctement les adversaires**, et
-d'autant plus qu'on simule de mondes. L'étendre à deux tours n'apporte rien.
+Le calcul de fin de partie **aide quand il simule correctement les adversaires**. Passer de
+16 à 32 mondes aide (apparié : +0,038 [+0,003 ; +0,076]), mais **le gain sature vers 32
+mondes**, et l'étendre à deux tours n'apporte rien. Réglage retenu : 1 tour, 32 mondes, soit
+quelques secondes par coup, seulement en fin de partie.
 
 **4. Bluffer et semer le doute.** Pas mesuré, mais une conséquence est sûre : **on ne peut
 pas bluffer le greedy**, qui compte un dos pour zéro. Le bluff ne peut s'apprendre qu'en
