@@ -2,7 +2,7 @@
 
 Session autonome d'environ 1 h 30. Il s'agit d'une **exploration**, pas d'une phase au sens
 du protocole : rien n'est pré-inscrit ni audité. Les chiffres sont néanmoins mesurés sur une
-arène calibrée, et chaque ligne se rejoue par une commande (§5).
+arène calibrée, et chaque ligne se rejoue par une commande (§6).
 
 ---
 
@@ -306,7 +306,32 @@ les versions précédentes, et un classement de type Elo/TrueSkill à 3 joueurs.
 tout en faisant moins bien que v1 contre le greedy : à 3 joueurs, un seul adversaire ne
 suffit pas à ordonner les agents.
 
-## 5. Rejouer
+## 5. Suite du 27/09 après-midi : la boucle d'auto-jeu sur le jeu complet
+
+`experiences/iteration.py`, jeu complet (90 cartes, 3 joueurs). À chaque génération :
+16 000 parties jouées par la politique courante (5 % de coups aléatoires), apprentissage de
+V à partir des poids courants, puis jugement sur des donnes **fixes** : 300 contre 2 greedys,
+150 contre 2 × c1b (l'ancre), 150 contre 2 × la politique courante. Suivi lisible :
+`uv run python -m experiences.suivi experiences/resultats/iteration3.jsonl`.
+
+Trois versions de la boucle, parce que les deux premières ont échoué, et leurs échecs
+**sont** le résultat.
+
+| Version | Ce qui change | Ce qui s'est passé | Journal |
+|---|---|---|---|
+| v1 | ligue tirée siège par siège (60 % courante, 25 % anciennes, 15 % greedy), fenêtre des 3 dernières générations | **dérive** : gen 1 bat c1b (+0,35) mais recule contre le greedy (+0,169 → +0,118) ; gen 2 **perd** contre gen 1 (−0,053) et tombe à +0,054 contre le greedy. Chaque génération apprenait à exploiter la précédente | `iteration1_derive.jsonl` |
+| v2 | toutes les données gardées (plafond 14 M vues, parties greedy comprises), **gardien** : bat la courante et ne recule pas de plus de 0,03 contre le greedy | gen 1 bat c1b (+0,125) mais **perd contre le greedy** (−0,075) ; rejetée | `iteration2_rejet.jsonl` |
+| v3 | **un contexte par partie** : 30 % contre 2 greedys, 40 % auto-jeu pur, 30 % contre les anciennes versions | voir ci-dessous | `iteration3.jsonl` |
+
+**La mesure qui explique l'échec de la v2.** Sur les parties entre agents appris, c1b a un R²
+de **−0,12** : il y prédit moins bien qu'une constante. La valeur d'une position dépend
+fortement de **qui sont les adversaires**. Tirée siège par siège, la ligue ne produisait le
+contexte « 2 greedys en face » qu'une partie sur 16, alors que c'est celui du juge. Tirée par
+partie, elle le produit trois fois sur dix.
+
+RESULTATS_ITERATION3
+
+## 6. Rejouer
 
 Tout est dans `experiences/`, sans rien modifier au moteur ni à `agents/`. torch doit être
 dans le venv (`uv pip install torch`, ou mieux, un groupe de dépendances).
