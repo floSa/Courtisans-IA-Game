@@ -112,6 +112,9 @@ def tenseur_rapide_v1(etat: State, joueur: int) -> list[float]:
 
 
 _DISPOSITIONS: dict = {}
+#: `infoset._phase_one_hot`, precalcule : POSE et CIBLAGE, tout a zero ailleurs.
+_PHASE = {ph: tuple(1 if nom == ph.name else 0 for nom in infoset.PHASES_DE_DECISION)
+          for ph in Phase}
 
 
 def _disposition(config):
@@ -211,7 +214,7 @@ def tenseur_rapide(etat: State, joueur: int) -> list[float]:
         float(v)
         for bloc in (
             main, bv, bp, dv, dp, residu, morts, marges, dos_b, dos_d, tours,
-            (len(etat._pioche),), (len(etat._defausse),), infoset._phase_one_hot(etat),
+            (len(etat._pioche),), (len(etat._defausse),), _PHASE[etat._phase],
             infoset._assassin_one_hot(etat.assassin_en_resolution(), joueur, config),
             (infoset._assassins_restants(etat),), scores, (ecart,),
         )

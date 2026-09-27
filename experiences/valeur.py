@@ -107,7 +107,7 @@ def agent_valeur(rng, chemin, poids_ecart=0.05, temperature=0.0, mondes_ciblage=
                 appliquer(s, a)
                 vues.append(tenseur(s, moi))
         with torch.no_grad():
-            p = net(torch.tensor(vues, dtype=torch.float32))
+            p = net(torch.from_numpy(np.asarray(vues, dtype=np.float32)))
         p = p.view(len(mondes), len(legales), 2).mean(0)
         score = (p[:, 0] + poids_ecart * p[:, 1]).tolist()
         if temperature > 0:
@@ -175,7 +175,7 @@ def pimc_valeur(rng, chemin, nb_mondes=8, poids_ecart=0.05, adversaires="greedy"
                     s.apply(simule(s))
                 vues.append(tenseur(s, moi))
         with torch.no_grad():
-            p = net(torch.tensor(vues, dtype=torch.float32))
+            p = net(torch.from_numpy(np.asarray(vues, dtype=np.float32)))
         p = p.view(nb_mondes, len(legales), 2).mean(0)
         score = (p[:, 0] + poids_ecart * p[:, 1]).tolist()
         m = max(score)
