@@ -366,7 +366,46 @@ c1b y fait +0,169, et le rejeu de c1b redonne ce chiffre au bit près.
 **Le goulot est donc la vitesse du moteur**, qui fixe le nombre de parties par heure.
 `experiences/rapide.py` calcule désormais le tenseur en une passe : 48 µs contre 318 µs pour
 l'officiel, sous charge, égal bit à bit sur 52 181 états et 4 configurations. La boucle
-`iteration6` repart de la gen 5 avec ce moteur et 24 000 parties par génération.
+`iteration6` repart de la gen 5 avec ce moteur et 24 000 parties par génération : environ
+55 parties/s, deux fois plus qu'avant.
+
+**`iteration6`** (`iteration6.jsonl`) : gens 3, 5 et 6 acceptées, 1, 2, 4, 7 et 8 rejetées.
+Contre le greedy, 0,295 → **0,328** → 0,300, puis plateau vers +0,30.
+
+### 5.1 Le tournoi du 27/09 au soir — le juge qui tranche
+
+`experiences/tournoi.py` : chaque agent contre deux copies de chaque autre, sur les mêmes
+120 donnes (5 900 000 à 5 900 119), soit 56 confrontations et 20 160 parties. Brut dans
+`experiences/resultats/tournoi_27_09.txt`. Ligne = l'agent, colonne = ses deux adversaires.
+
+| | greedy | c1b | it3/g1 | it5/g3 | it5/g5 | it6/g3 | it6/g5 | it6/g6 | **moyenne** |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| greedy | — | +0,140 | −0,061 | −0,084 | −0,108 | −0,156 | −0,094 | −0,099 | −0,066 |
+| c1b | +0,172 | — | −0,174 | −0,230 | −0,229 | −0,229 | −0,302 | −0,276 | −0,181 |
+| it3/gen_01 | +0,127 | +0,315 | — | −0,060 | −0,035 | −0,076 | −0,194 | −0,160 | −0,012 |
+| it5/gen_03 | +0,278 | +0,376 | +0,066 | — | −0,030 | +0,001 | −0,063 | −0,071 | +0,080 |
+| it5/gen_05 | +0,251 | +0,380 | +0,024 | +0,051 | — | +0,003 | −0,026 | −0,011 | +0,096 |
+| it6/gen_03 | +0,321 | +0,447 | +0,138 | −0,004 | +0,007 | — | −0,026 | −0,014 | +0,124 |
+| it6/gen_05 | +0,373 | +0,421 | +0,128 | +0,076 | +0,081 | +0,000 | — | +0,009 | +0,155 |
+| **it6/gen_06** | **+0,382** | **+0,474** | +0,188 | +0,053 | +0,033 | +0,024 | +0,019 | — | **+0,168** |
+
+À lire ainsi :
+
+- **Le classement suit l'ordre d'entraînement** : la progression est réelle, pas un tirage
+  favorable du gardien. Chaque confrontation directe entre générations proches reste petite
+  (+0,02 à +0,08) et ne serait pas établie seule ; c'est la **cohérence de toute la
+  matrice** qui porte la conclusion.
+- **c1b bat le greedy (+0,172) et finit dernier.** Spécialisé contre le greedy, il perd
+  contre tout le reste, y compris quand le greedy l'affronte en double (+0,140 pour le
+  greedy). C'est la démonstration qu'un juge unique ne suffit pas.
+
+**La meilleure IA à ce jour : `experiences/modeles/meilleur.pt`** (= `iteration6/gen_06.pt`).
+Contre 2 greedys, sur 400 donnes (5 000 000 à 5 000 399), soit 1 200 parties : gain
+**+0,289**, IC 99 % [+0,236 ; +0,341]. Elle **gagne seule 48,8 % des parties** ; un greedy
+mis à sa place, sur les mêmes donnes, en gagne seul 28,5 %. Écart de score moyen : **+0,56
+point** pour elle, −2,39 pour le greedy à sa place.
+
+**En cours :** `iteration7`, même boucle avec **λ = 0,5**, à partir de `meilleur.pt`.
 
 ## 6. Rejouer
 
