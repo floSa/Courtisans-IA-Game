@@ -101,6 +101,29 @@ n'a que 12 poses par partie.
 - **Avant de réparer un organe, calculer ce qu'il peut rapporter au mieux.** Le gain maximal
   d'un meilleur critique à λ = 1 se bornait sur papier.
 
+**Addendum du soir — la boucle d'auto-jeu, jeu complet.** Détail : §5 de la revue.
+
+- **Deux échecs, chacun mesuré et corrigé.** v1 dérive : chaque génération exploite la
+  précédente (gen 2 perd contre gen 1, −0,053). v2 perd contre le greedy (−0,075), parce que la
+  valeur dépend des adversaires (c1b : R² = −0,12 sur les parties entre agents appris) et que
+  la ligue, tirée siège par siège, ne produisait « 2 greedys en face » qu'une partie sur 16.
+  Correctif : **un contexte par partie**.
+- **Le gardien avait deux défauts**, un cliquet (tolérance cumulée) puis une malédiction du
+  gagnant (plancher = maximum de mesures bruitées). Le premier est corrigé, le second
+  documenté.
+- **Plateau en Monte-Carlo ; TD(λ = 0,7) le débloque.** Contre 2 greedys : +0,148 → +0,220 →
+  +0,247 → +0,303 → +0,328. Un réseau plus gros n'aide pas (trois tailles plafonnent à
+  R² ≈ 0,057), une recherche à un tour non plus (+0,038, IC [−0,053 ; +0,133]). **La limite
+  est le bruit de la cible et le nombre de parties** ; le tenseur en une passe, égal bit à
+  bit à l'officiel, double le débit.
+- **Tournoi à 8, 20 160 parties : classement monotone avec l'entraînement.** La meilleure,
+  `experiences/modeles/meilleur.pt` : +0,289 IC 99 % [+0,236 ; +0,341] contre 2 greedys,
+  48,8 % de victoires seules (greedy à sa place : 28,5 %).
+
+**Enseignement.** À trois joueurs, **la distribution des adversaires pendant l'apprentissage
+est un hyperparamètre de premier ordre**, au même titre que l'algorithme : elle a fait passer
+la même boucle d'une perte à un gain contre le greedy.
+
 ---
 
 ## [2026-08-24] Phase 4, itération 1 — La tête de valeur : hypothèse réfutée avant l'entraînement
