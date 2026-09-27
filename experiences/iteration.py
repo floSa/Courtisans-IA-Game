@@ -291,6 +291,14 @@ def main():
     ap.add_argument("--augment", type=int, default=1)
     ap.add_argument("--max-echantillons", type=int, default=14_000_000)
     ap.add_argument("--tolerance", type=float, default=0.03)
+    ap.add_argument("--marge-courant", type=float, default=0.02,
+                    help="gain minimal contre 2 x la courante pour accepter")
+    ap.add_argument("--meilleur-greedy", type=float, default=None,
+                    help="a la reprise : le meilleur gain contre le greedy deja atteint")
+    ap.add_argument("--graine-donnes", type=int, default=8_500_000,
+                    help="premiere donne d'auto-jeu ; a decaler a chaque reprise")
+    ap.add_argument("--passes-initiales", nargs="*", default=[],
+                    help="modeles deja acceptes, remis dans la ligue a la reprise")
     ap.add_argument("--part-greedy", type=float, default=0.3)
     ap.add_argument("--part-self", type=float, default=0.4)
     ap.add_argument("--workers", type=int, default=11)
@@ -307,10 +315,11 @@ def main():
     t0 = time.time()
     courant = str(modeles / "gen_00.pt")
     torch.save(torch.load(a.depart, map_location="cpu"), courant)
-    acceptees = [courant]
+    acceptees = [*a.passes_initiales, courant]
     fichiers: list[Path] = [Path(f) for f in a.donnees_initiales]
     with ProcessPoolExecutor(a.workers) as ex:
         greedy_courant = juger(ex, courant, "greedy", 5_000_000, a.donnes_greedy)
+        meilleur_greedy = max(greedy_courant["gain"], a.meilleur_greedy or -1.0)
         with open(journal, "a") as f:
             f.write(json.dumps({"generation": 0, "modele": courant,
                                 "contre_greedy": greedy_courant, "parametres": vars(a)}) + "\n")
@@ -320,7 +329,7 @@ def main():
                 break
             debut_gen = time.time()
             donnees = donnees_dir / f"gen_{k:02d}.npz"
-            n = generer(ex, courant, acceptees[:-1], 8_500_000 + 100_000 * k,
+            n = generer(ex, courant, acceptees[:-1], a.graine_donnes + 100_000 * k,
                         a.parties, a.eps, a.augment, donnees, a.part_greedy, a.part_self)
             fichiers.append(donnees)
             t_gen = time.time() - debut_gen
@@ -330,8 +339,11 @@ def main():
             contre_greedy = juger(ex, candidat, "greedy", 5_000_000, a.donnes_greedy)
             contre_courant = juger(ex, candidat, courant, 5_800_000 + 1000 * k, a.donnes_ligue)
             contre_ancre = juger(ex, candidat, ANCRE, 5_700_000, a.donnes_ligue)
-            accepte = (contre_courant["gain"] > 0
-                       and contre_greedy["gain"] >= greedy_courant["gain"] - a.tolerance)
+            # Le plancher est le MEILLEUR niveau atteint, pas celui de la courante : mesure
+            # relativement a la courante, la tolerance se cumulait d'une generation a l'autre
+            # (v3 : +0,169 -> +0,159 -> +0,148, un cliquet vers le bas).
+            accepte = (contre_courant["gain"] > a.marge_courant
+                       and contre_greedy["gain"] >= meilleur_greedy - a.tolerance)
             ligne = {
                 "generation": k,
                 "modele": candidat,
@@ -353,7 +365,7 @@ def main():
                   "contre_courant", "contre_ancre_c1b", "secondes")}), flush=True)
             if accepte:
                 courant = candidat
-                greedy_courant = contre_greedy
+                meilleur_greedy = max(meilleur_greedy, contre_greedy["gain"])
                 acceptees.append(courant)
     return 0
 
