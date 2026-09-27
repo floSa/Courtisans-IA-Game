@@ -20,8 +20,24 @@ Iteration de politique approchee, facon TD-Gammon :
 
 Exploration : les sieges de `V_k` jouent un coup uniforme avec une probabilite `eps`.
 
+Version 2 -- apres la derive mesuree le 27/09 a 16 h 25
+--------------------------------------------------------
+La v1 (fenetre des 3 dernieres generations, sans gardien) a derive : gen 1 bat c1b de +0,35
+mais recule contre le greedy (+0,169 -> +0,118), gen 2 PERD contre gen 1 (-0,053) et tombe a
++0,054 contre le greedy. Chaque generation apprenait a exploiter la precedente. Trois
+correctifs :
+
+- **toutes les donnees** sont gardees (plafond `--max-echantillons`, les deux dernieres
+  generations entieres, les plus anciennes sous-echantillonnees a parts egales), donnees
+  greedy initiales comprises : V apprend la valeur contre la POPULATION, pas contre la
+  derniere version -- l'esprit du jeu fictif ;
+- un **gardien** : le candidat ne remplace la politique courante que s'il la bat (gain > 0
+  contre 2 x courante) ET ne recule pas de plus de `--tolerance` contre le greedy ;
+- une ligue plus large : courante 50 %, anciennes acceptees 25 %, greedy 25 %.
+
 Lancer :
-    COURTISANS_INSTANCE=complete uv run python -m experiences.iteration --duree-max-h 2
+    COURTISANS_INSTANCE=complete uv run python -m experiences.iteration --duree-max-h 2 \\
+        --donnees-initiales <parties greedy .npz> ...
 """
 
 from __future__ import annotations
@@ -47,9 +63,6 @@ from experiences.rapide import appliquer, tenseur_rapide
 from experiences.valeur import ENTREE, V, agent_valeur
 
 RACINE = Path("experiences")
-MODELES = RACINE / "modeles" / "iteration"
-DONNEES = RACINE / "donnees" / "iteration"
-JOURNAL = RACINE / "resultats" / "iteration.jsonl"
 ANCRE = str(RACINE / "modeles" / "c1b.pt")
 
 
@@ -86,9 +99,9 @@ def _jouer_lot(args):
         tenus = []
         for _ in range(CONFIG.joueurs):
             u = rng.random()
-            if u < 0.60 or (u < 0.85 and not passes):
+            if u < 0.50 or (u < 0.75 and not passes):
                 tenus.append(courant)
-            elif u < 0.85:
+            elif u < 0.75:
                 tenus.append(rng.choice(passes))
             else:
                 tenus.append("greedy")
@@ -141,23 +154,58 @@ def generer(ex, courant, passes, debut, parties, eps, augment, sortie):
     return sum(len(g) for g in gs)
 
 
-def entrainer(depart: str, fichiers: list[Path], sortie: str, epoques=3, lot=4096, lr=5e-4):
+def _quotas(tailles: list[int], plafond: int) -> list[int]:
+    """Les deux derniers fichiers entiers ; le reste du plafond a parts egales sur les autres."""
+    if sum(tailles) <= plafond:
+        return list(tailles)
+    recents = tailles[-2:]
+    anciens = tailles[:-2]
+    reste = max(0, plafond - sum(recents))
+    quotas = [0] * len(anciens)
+    a_servir = list(range(len(anciens)))
+    while a_servir and reste > 0:
+        part = reste // len(a_servir)
+        suivants = []
+        for i in a_servir:
+            prend = min(part, anciens[i] - quotas[i])
+            quotas[i] += prend
+            reste -= prend
+            if quotas[i] < anciens[i]:
+                suivants.append(i)
+        if part == 0:
+            break
+        a_servir = suivants
+    return quotas + recents
+
+
+def entrainer(depart: str, fichiers: list[Path], sortie: str, epoques=3, lot=4096, lr=5e-4,
+              plafond=14_000_000, graine=0):
     """Part des poids `depart`. Validation : les 5 % finaux du fichier le plus recent
     (parties contigues, donc d'autres parties que celles de l'apprentissage)."""
     dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    rng = np.random.default_rng(graine)
     blocs = [np.load(f) for f in fichiers]
+    tailles = [len(b["G"]) for b in blocs]
+    tailles[-1] = int(0.95 * tailles[-1])
+    quotas = _quotas(tailles, plafond)
+    Xa = np.empty((sum(quotas), ENTREE), np.float16)
+    Ya = np.empty((sum(quotas), 2), np.float32)
+    pos = 0
+    for b, taille, q in zip(blocs, tailles, quotas, strict=True):
+        idx = np.sort(rng.choice(taille, q, replace=False)) if q < taille else np.arange(q)
+        X, G, M = b["X"], b["G"], b["M"]
+        Xa[pos : pos + q] = X[idx]
+        Ya[pos : pos + q, 0] = G[idx]
+        Ya[pos : pos + q, 1] = M[idx] / 5.0
+        pos += q
+        del X
     dernier = blocs[-1]
-    n_dernier = len(dernier["G"])
-    coupe_d = int(0.95 * n_dernier)
-    Xa = np.concatenate([b["X"] for b in blocs[:-1]] + [dernier["X"][:coupe_d]])
-    Ya = np.concatenate(
-        [np.stack([b["G"], b["M"] / 5.0], 1) for b in blocs[:-1]]
-        + [np.stack([dernier["G"][:coupe_d], dernier["M"][:coupe_d] / 5.0], 1)]
-    )
+    coupe_d = tailles[-1]
     Xv = torch.tensor(dernier["X"][coupe_d:], dtype=torch.float32, device=dev)
     Yv = torch.tensor(dernier["G"][coupe_d:], dtype=torch.float32, device=dev)
     Xt = torch.tensor(Xa, dtype=torch.float16, device=dev)
     Yt = torch.tensor(Ya, dtype=torch.float32, device=dev)
+    del Xa, Ya
     net = V()
     net.load_state_dict(torch.load(depart, map_location="cpu"))
     net = net.to(dev)
@@ -188,7 +236,8 @@ def entrainer(depart: str, fichiers: list[Path], sortie: str, epoques=3, lot=409
             meilleurs_poids = {k: v.clone() for k, v in net.state_dict().items()}
     net.load_state_dict(meilleurs_poids)
     torch.save({k: v.cpu() for k, v in net.state_dict().items()}, sortie)
-    return {"echantillons": n, "r2_validation": historique, "r2_retenu": meilleur}
+    return {"echantillons": n, "quotas": quotas, "r2_validation": historique,
+            "r2_retenu": meilleur}
 
 
 def juger(ex, agent: str, adversaire: str, depart: int, donnes: int):
@@ -211,59 +260,78 @@ def juger(ex, agent: str, adversaire: str, depart: int, donnes: int):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--depart", default=ANCRE, help="poids de la generation 0")
+    ap.add_argument("--donnees-initiales", nargs="*", default=[],
+                    help="fichiers npz gardes dans la population des le debut")
+    ap.add_argument("--run", default="iteration2")
     ap.add_argument("--generations", type=int, default=100)
     ap.add_argument("--duree-max-h", type=float, default=2.0)
-    ap.add_argument("--parties", type=int, default=10_000)
+    ap.add_argument("--parties", type=int, default=16_000)
     ap.add_argument("--eps", type=float, default=0.05)
     ap.add_argument("--augment", type=int, default=1)
-    ap.add_argument("--fenetre", type=int, default=3)
+    ap.add_argument("--max-echantillons", type=int, default=14_000_000)
+    ap.add_argument("--tolerance", type=float, default=0.03)
     ap.add_argument("--workers", type=int, default=11)
     ap.add_argument("--donnes-greedy", type=int, default=300)
     ap.add_argument("--donnes-ligue", type=int, default=150)
     a = ap.parse_args()
     if CONFIG.familles != 6:
         raise SystemExit("la boucle vise le jeu complet : COURTISANS_INSTANCE=complete")
-    MODELES.mkdir(parents=True, exist_ok=True)
-    DONNEES.mkdir(parents=True, exist_ok=True)
+    modeles = RACINE / "modeles" / a.run
+    donnees_dir = RACINE / "donnees" / a.run
+    journal = RACINE / "resultats" / f"{a.run}.jsonl"
+    modeles.mkdir(parents=True, exist_ok=True)
+    donnees_dir.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
-    courant = str(MODELES / "gen_00.pt")
+    courant = str(modeles / "gen_00.pt")
     torch.save(torch.load(a.depart, map_location="cpu"), courant)
-    generations = [courant]
-    fichiers: list[Path] = []
+    acceptees = [courant]
+    fichiers: list[Path] = [Path(f) for f in a.donnees_initiales]
     with ProcessPoolExecutor(a.workers) as ex:
+        greedy_courant = juger(ex, courant, "greedy", 5_000_000, a.donnes_greedy)
+        with open(journal, "a") as f:
+            f.write(json.dumps({"generation": 0, "modele": courant,
+                                "contre_greedy": greedy_courant, "parametres": vars(a)}) + "\n")
+        print(json.dumps({"generation": 0, "contre_greedy": greedy_courant}), flush=True)
         for k in range(1, a.generations + 1):
             if time.time() - t0 > a.duree_max_h * 3600:
                 break
             debut_gen = time.time()
-            donnees = DONNEES / f"gen_{k:02d}.npz"
-            n = generer(ex, courant, generations[:-1], 8_500_000 + 100_000 * k,
+            donnees = donnees_dir / f"gen_{k:02d}.npz"
+            n = generer(ex, courant, acceptees[:-1], 8_500_000 + 100_000 * k,
                         a.parties, a.eps, a.augment, donnees)
             fichiers.append(donnees)
             t_gen = time.time() - debut_gen
-            nouveau = str(MODELES / f"gen_{k:02d}.pt")
-            appr = entrainer(courant, fichiers[-a.fenetre:], nouveau)
+            candidat = str(modeles / f"gen_{k:02d}.pt")
+            appr = entrainer(courant, fichiers, candidat, plafond=a.max_echantillons, graine=k)
             t_appr = time.time() - debut_gen - t_gen
+            contre_greedy = juger(ex, candidat, "greedy", 5_000_000, a.donnes_greedy)
+            contre_courant = juger(ex, candidat, courant, 5_800_000 + 1000 * k, a.donnes_ligue)
+            contre_ancre = juger(ex, candidat, ANCRE, 5_700_000, a.donnes_ligue)
+            accepte = (contre_courant["gain"] > 0
+                       and contre_greedy["gain"] >= greedy_courant["gain"] - a.tolerance)
             ligne = {
                 "generation": k,
-                "modele": nouveau,
+                "modele": candidat,
+                "courant_avant": courant,
+                "accepte": accepte,
                 "parties_auto_jeu": a.parties,
                 "vues_collectees": n,
                 "apprentissage": appr,
-                "contre_greedy": juger(ex, nouveau, "greedy", 5_000_000, a.donnes_greedy),
-                "contre_ancre_c1b": juger(ex, nouveau, ANCRE, 5_700_000, a.donnes_ligue),
-                "contre_precedente": juger(ex, nouveau, courant, 5_800_000 + 1000 * k,
-                                           a.donnes_ligue),
+                "contre_greedy": contre_greedy,
+                "contre_courant": contre_courant,
+                "contre_ancre_c1b": contre_ancre,
                 "secondes": {"auto_jeu": round(t_gen), "apprentissage": round(t_appr),
                              "jugement": round(time.time() - debut_gen - t_gen - t_appr),
                              "depuis_debut": round(time.time() - t0)},
-                "parametres": vars(a),
             }
-            with open(JOURNAL, "a") as f:
+            with open(journal, "a") as f:
                 f.write(json.dumps(ligne) + "\n")
-            print(json.dumps({c: ligne[c] for c in ("generation", "contre_greedy",
-                  "contre_ancre_c1b", "contre_precedente", "secondes")}), flush=True)
-            courant = nouveau
-            generations.append(courant)
+            print(json.dumps({c: ligne[c] for c in ("generation", "accepte", "contre_greedy",
+                  "contre_courant", "contre_ancre_c1b", "secondes")}), flush=True)
+            if accepte:
+                courant = candidat
+                greedy_courant = contre_greedy
+                acceptees.append(courant)
     return 0
 
 
