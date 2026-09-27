@@ -9,6 +9,15 @@ dependencies = []
 # open_spiel n'est utilise que par l'adaptateur et ses tests. Le coeur ne l'importe pas :
 # le critere A4 le verifie dans un sous-processus.
 dev = ["pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.6", "open_spiel>=1.5"]
+ia = [
+    "numpy>=1.26",
+    "torch>=2.4",
+]
+
+[tool.uv]
+# `ia` porte torch et numpy : les agents appris et `experiences/`. Installe par defaut pour
+# que `uv run` ne retire pas torch d'un environnement ou tourne un entrainement.
+default-groups = ["dev", "ia"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

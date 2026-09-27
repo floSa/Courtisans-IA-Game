@@ -9,7 +9,20 @@ Mis à jour le 20/08/2026, après la clôture de la phase 2 et le bouchage des t
 
 ---
 
-## Où on en est
+## Où on en est — 27/09/2026, reprise
+
+| | |
+|---|---|
+| Ce qui a changé | **Pivot d'algorithme.** Le PPO à tête d'indices est abandonné : son ciblage d'Assassin était aveugle (64 % des nœuds) et il perd contre le greedy (−0,185). Une **valeur d'après-coup** (on joue chaque coup sur un clone et on note la vue qui en résulte) bat le greedy **sur le jeu complet à 90 cartes**, +0,169 IC 99 % [+0,112 ; +0,227]. Entrée de journal du 27/09 |
+| Travail en cours | Boucle d'auto-jeu contre une ligue, **jeu complet**, `experiences/iteration.py`. Journal : `experiences/resultats/iteration.jsonl` |
+| Documents à lire | [experiences/REVUE_CRITIQUE.md](experiences/REVUE_CRITIQUE.md) (critique, résultats, commandes), puis l'entrée du 27/09 de [06_journal_decisions.md](documentations/06_journal_decisions.md) |
+| Branche | `reprise-iteration-experte` |
+| Méthode | Deux régimes : **exploratoire** dans `experiences/` (arène figée, essais en minutes), **confirmatoire** (pré-inscription + audit croisé) pour ce qu'on veut affirmer |
+| Prochaine marche | Recherche dont les adversaires sont simulés par la politique apprise, distillée dans V (itération experte) ; inférence sur les Espions ; moteur plus rapide |
+
+L'état ci-dessous est celui du 24/08. Il est conservé tel quel, comme document historique.
+
+## Où on en était le 24/08
 
 | | |
 |---|---|

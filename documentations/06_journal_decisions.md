@@ -16,6 +16,93 @@ Impact plan : phases invalidées ou modifiées
 
 ---
 
+## [2026-09-27] Reprise — revue critique, et changement de méthode : chercher, puis apprendre
+
+**Statut, en premier parce qu'il conditionne la lecture.** Cette entrée rend compte d'une
+séance **exploratoire** : rien n'y a été pré-inscrit ni audité par une conversation distincte.
+Les chiffres sont mesurés sur une arène calibrée, se rejouent par une commande, et chaque
+contrôle d'aveuglement porte son témoin positif. Mais aucun ne vaut verdict au sens du §0 du
+protocole. Détail, commandes et limites : [experiences/REVUE_CRITIQUE.md](../experiences/REVUE_CRITIQUE.md).
+
+**Hypothèse (a posteriori, et dite telle).** L'agent de la phase 3 n'est pas battu parce que
+son critique est imprécis, mais parce que (1) sa tête d'action ne peut pas représenter une
+partie des décisions, et (2) un apprentissage sans modèle, sur un gain ±1 épars, se prive du
+simulateur parfait et de l'information majoritairement publique qui font la force du greedy.
+
+**Instrument.** `experiences/arene.py` : gain moyen contre deux adversaires, sièges permutés,
+IC 99 % bootstrap par donne, donnes 5 000 000+, données d'apprentissage 8 000 000+. Contrôle du
+niveau nul : greedy contre greedy, +0,007, IC [−0,032 ; +0,046]. Concordance avec le dépôt : le
+PPO de la phase 3 y rend −0,185, IC [−0,226 ; −0,144], contre −0,164 publié.
+
+**Résultat.**
+
+- **Le ciblage de l'Assassin est aveugle dans le tenseur.** Sur 14 368 nœuds de ciblage en jeu
+  greedy, 9 246 (64 %) offrent au moins deux cibles d'identités différentes, et dans 100 % de
+  ces cas, inverser l'ordre d'arrivée des cartes change la carte désignée par chaque indice
+  sans changer le tenseur d'un bit. La dette n° 2 du README (« l'encodage par cible n'est pas
+  écrit ») n'était pas une dette de confort : le réseau de la phase 3 choisissait sa victime
+  sans la connaître. Un test de caractérisation le tient désormais
+  (`tests/experiences/test_experiences.py`).
+- **Une recherche sans aucun apprentissage bat le greedy.** PIMC (mondes tirés à l'aveugle,
+  rollouts greedy) : +0,129 avec 8 mondes, +0,194 avec 24, instance réduite.
+- **Une valeur de précision médiocre bat le greedy, si l'on note des conséquences et non des
+  indices.** L'agent « d'après-coup » clone l'état, joue chaque action légale et note la vue
+  qui en résulte par un réseau V. R² ≈ 0,18 — l'ordre de grandeur du critique jugé « mauvais »
+  en phase 3 —, et il gagne +0,149, IC [+0,105 ; +0,194], instance réduite, après 12 min de
+  données greedy et 1 min de GPU. **Sur le jeu complet à 90 cartes : +0,169, IC
+  [+0,112 ; +0,227]**, 60 000 parties greedy. Le PPO avait consommé 1 486 336 parties.
+- **Une recherche qui simule le greedy exploite le greedy.** Contre deux agents de valeur,
+  PIMC fait −0,018 et recherche + valeur +0,013 : leur avance contre le greedy tenait en bonne
+  partie à un modèle d'adversaire exact.
+- **Non-transitivité.** v2, entraînée sur l'auto-jeu de v1, bat deux v1 (+0,114, IC
+  [+0,071 ; +0,160]) et recule contre le greedy (+0,095 contre +0,120).
+
+**Audit (interne, et un défaut trouvé dans le livrable même).** La première version de l'agent
+d'après-coup **trichait au ciblage** : jouer « tuer le dos n° i » sur l'état réel révèle la
+victime, la défausse étant publique. Correctif : noter chaque ciblage en moyenne sur des mondes
+re-tirés à l'aveugle. 0 décision sur 2 988 ne dépend plus de l'identité réelle des dos ; le
+témoin, l'ancienne version, en dépendait 514 fois. Les chiffres publiés sont ceux de la version
+corrigée, et l'écart était faible (v1 : +0,128 → +0,120). **Un agent qui simule le futur sur
+l'état réel est une porte que la preuve d'aveuglement du greedy ne couvrait pas** : elle
+vérifie ce que l'agent *lit*, pas ce qu'il *simule*.
+
+**Ce qui revient sur une conclusion antérieure.** L'entrée de la phase 3 écrivait « la valeur
+n'est pas imprédictible dans ce jeu : **le critique est mauvais** », sur un plancher de 0,57
+calculé sur l'état complet. La phase 4 a réfuté le remède sans l'entraîner, ce qui est à son
+crédit. Mais le diagnostic lui-même était de trop : **à λ = 1, le critique ne sert qu'à réduire
+la variance de l'avantage, dans la proportion de son R²**, et la mesure du 27/09 montre qu'une
+valeur de même précision suffit à gagner quand elle sert à choisir.
+
+**Décision. PIVOT D'ALGORITHME.** La ligne « PPO à tête d'indices d'action » est **abandonnée,
+pas itérée** — l'itération 2 de la phase 4, tête auxiliaire, n'est pas lancée. La suite est
+l'**itération experte** : une valeur d'après-coup apprise en auto-jeu contre une ligue, puis
+une recherche qui simule ses adversaires par la politique apprise, distillée à son tour.
+Le **jeu complet** devient l'instance de travail : la méthode y marche, et l'instance réduite
+n'a que 12 poses par partie.
+
+**Impact plan.**
+
+1. Deux régimes : **exploratoire** (arène figée, essais en minutes, `experiences/`) et
+   **confirmatoire** (pré-inscription et audit croisé), réservé à ce qu'on veut affirmer.
+2. Le juge devient une **ligue** — greedy, ancre `c1b`, générations précédentes — et plus le
+   seul greedy.
+3. `torch` et `numpy` sont déclarés (groupe `ia` de `pyproject.toml`) : le PPO de la phase 3
+   n'était plus reproductible depuis le lock.
+4. `experiences/rapide.py` : tenseur 2,5× plus rapide, **égal bit à bit** à `infoset.tenseur`
+   (52 181 comparaisons, quatre configurations). Le moteur reste la référence ; un portage plus
+   rapide se ferait sous la même suite de conformité.
+
+**Enseignements de méthode.**
+
+- **Un défaut annoncé comme dette doit être confronté au livrable qui la traverse.** La dette
+  n° 2 était écrite au README ; la phase 3 a entraîné sur elle.
+- **Un juge unique exploitable se fait exploiter.** Toute recherche qui simule le greedy
+  « bat » le greedy. Le contrôle est de la juger contre un adversaire qu'elle ne simule pas.
+- **Avant de réparer un organe, calculer ce qu'il peut rapporter au mieux.** Le gain maximal
+  d'un meilleur critique à λ = 1 se bornait sur papier.
+
+---
+
 ## [2026-08-24] Phase 4, itération 1 — La tête de valeur : hypothèse réfutée avant l'entraînement
 
 **Hypothèse.** *Pré-inscrite dans `prompts/18_phase4_iteration_1.md`, avant tout code.* Le

@@ -1,0 +1,19 @@
+{
+ "agent": "experiences.pimc:pimc:nb_mondes=24",
+ "adv": "experiences.pimc:greedy_rollout",
+ "donnes": 150,
+ "parties": 450,
+ "gain_moyen": 0.19444444444444445,
+ "ic99": [
+  0.12444444444444445,
+  0.26944444444444443
+ ],
+ "victoire_seule": 0.3977777777777778,
+ "ecart_score_moyen": -0.23333333333333334,
+ "par_siege": {
+  "0": -0.16333333333333333,
+  "1": 0.175,
+  "2": 0.5716666666666667
+ },
+ "secondes": 941.3345601558685
+}
