@@ -9,7 +9,7 @@ from courtisans.cards import Role
 from courtisans.config import GameConfig
 from courtisans.engine import Engine
 from courtisans.infoset import tenseur
-from experiences.rapide import appliquer, tenseur_rapide
+from experiences.rapide import appliquer, tenseur_rapide, tenseur_rapide_v1
 from mesure.instance import ENTRAINEMENT_3J
 
 COMPLETE = GameConfig(familles=6, roles=tuple(Role), exemplaires=3, joueurs=3)
@@ -43,7 +43,7 @@ def main():
     s = e.reset(1)
     for _ in range(20):
         s.apply(random.Random(0).choice(s.legal_actions()))
-    for f in (tenseur, tenseur_rapide):
+    for f in (tenseur, tenseur_rapide_v1, tenseur_rapide):
         t = time.perf_counter()
         for _ in range(2000):
             f(s, 0)

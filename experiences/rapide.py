@@ -14,14 +14,14 @@ de `infoset` elles-memes.
 from __future__ import annotations
 
 from courtisans import infoset
-from courtisans.cards import ROLES_CACHES, GenreZone, Position
+from courtisans.cards import ROLES_CACHES, VALEURS, GenreZone, Position
 from courtisans.engine import Phase, State
 
 _BANQUET = GenreZone.BANQUET
 _POSITIONS = tuple(Position)
 
 
-def tenseur_rapide(etat: State, joueur: int) -> list[float]:
+def tenseur_rapide_v1(etat: State, joueur: int) -> list[float]:
     config = etat.config
     vue = etat.vue_privilegiee()
     su = infoset.vue_du_joueur(etat, joueur)
@@ -104,6 +104,114 @@ def tenseur_rapide(etat: State, joueur: int) -> list[float]:
         for bloc in (
             ma_main, bv, bp, dv, dp, residu, morts, marges, dos_banquet, dos_domaine, tours,
             (len(vue.pioche),), (len(vue.defausse),), infoset._phase_one_hot(etat),
+            infoset._assassin_one_hot(etat.assassin_en_resolution(), joueur, config),
+            (infoset._assassins_restants(etat),), scores, (ecart,),
+        )
+        for v in bloc
+    ]
+
+
+_DISPOSITIONS: dict = {}
+
+
+def _disposition(config):
+    """Les index precalcules d'une configuration : (famille, role) -> rang, etc."""
+    cle = (config.familles, config.roles, config.joueurs)
+    if cle not in _DISPOSITIONS:
+        roles = config.roles
+        visibles = infoset._roles_visibles(config)
+        _DISPOSITIONS[cle] = (
+            {r: i for i, r in enumerate(roles)},
+            {r: i for i, r in enumerate(visibles)},
+            {p: i for i, p in enumerate(_POSITIONS)},
+            len(roles),
+            len(visibles),
+        )
+    return _DISPOSITIONS[cle]
+
+
+def tenseur_rapide(etat: State, joueur: int) -> list[float]:
+    """`infoset.tenseur`, en UNE passe sur les cartes. Egal bit a bit (experiences/test_rapide.py).
+
+    Les marges et les scores visibles sont tires des memes comptes : influence par famille au
+    banquet (valeurs signees, Espions du joueur compris -- ce sont des cartes connues) et
+    valeur par domaine et par famille, puis statut = signe de l'influence.
+    """
+    etat._joueur_observe(joueur)
+    config = etat.config
+    J = config.joueurs
+    F = config.familles
+    ridx, rvidx, pidx, R, RV = _disposition(config)
+    P = len(_POSITIONS)
+    main = [0] * (F * R)
+    morts = [0] * (F * R)
+    connues = [0] * (F * R)
+    bv = [0] * (F * RV * P)
+    dv = [0] * (F * RV * J)
+    bp = [0] * (F * P)
+    dp = [0] * (F * J)
+    infl = [0] * F
+    dom = [[0] * F for _ in range(J)]
+    dos_b = [0] * ((J - 1) * P)
+    dos_d = [0] * ((J - 1) * J)
+    dos_estime = dos_disgrace = 0
+    for c in etat._mains[joueur]:
+        main[c.famille * R + ridx[c.role]] += 1
+    for p in etat._defausse:
+        c = p.carte
+        morts[c.famille * R + ridx[c.role]] += 1
+    for p in etat._posees:
+        c = p.carte
+        z = p.zone
+        cache = c.role in ROLES_CACHES
+        if cache and p.poseur != joueur:
+            autre = (p.poseur - joueur) % J
+            if z.genre is _BANQUET:
+                dos_b[(autre - 1) * P + pidx[z.position]] += 1
+                if z.position is Position.ESTIME:
+                    dos_estime += 1
+                else:
+                    dos_disgrace += 1
+            else:
+                dos_d[(autre - 1) * J + (z.proprietaire - joueur) % J] += 1
+            continue
+        f = c.famille
+        connues[f * R + ridx[c.role]] += 1
+        v = VALEURS[c.role]
+        if z.genre is _BANQUET:
+            pi = pidx[z.position]
+            infl[f] += v if z.position is Position.ESTIME else -v
+            if cache:
+                bp[f * P + pi] += 1
+            else:
+                bv[(f * RV + rvidx[c.role]) * P + pi] += 1
+        else:
+            autre = (z.proprietaire - joueur) % J
+            dom[z.proprietaire][f] += v
+            if cache:
+                dp[f * J + autre] += 1
+            else:
+                dv[(f * RV + rvidx[c.role]) * J + autre] += 1
+    ex = config.exemplaires
+    residu = [ex - connues[i] - main[i] - morts[i] for i in range(F * R)]
+    tours = [etat.tours_restants((joueur + a) % J) for a in range(J)]
+    poses_restantes = sum(tours)
+    marges = []
+    for f in range(F):
+        en_circulation = sum(residu[f * R : (f + 1) * R])
+        en_main = sum(main[f * R : (f + 1) * R])
+        d = infl[f]
+        marges += (d, d - dos_disgrace, d + dos_estime,
+                   min(en_main + en_circulation, poses_restantes))
+    signe = [1 if d >= 1 else (-1 if d <= -1 else 0) for d in infl]
+    points = [sum(dom[o][f] * signe[f] for f in range(F)) for o in range(J)]
+    scores = [points[(joueur + a) % J] for a in range(J)]
+    ecart = scores[0] - max(scores[1:], default=0)
+    return [
+        float(v)
+        for bloc in (
+            main, bv, bp, dv, dp, residu, morts, marges, dos_b, dos_d, tours,
+            (len(etat._pioche),), (len(etat._defausse),), infoset._phase_one_hot(etat),
             infoset._assassin_one_hot(etat.assassin_en_resolution(), joueur, config),
             (infoset._assassins_restants(etat),), scores, (ecart,),
         )
