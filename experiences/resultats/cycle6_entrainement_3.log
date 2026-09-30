@@ -1,0 +1,6 @@
+epoque 0 perte 1.5859 | test : R2 gain 0.0689 logloss statuts 0.9011 precision 0.5654
+epoque 1 perte 1.5592 | test : R2 gain 0.0917 logloss statuts 0.8906 precision 0.5709
+epoque 2 perte 1.5463 | test : R2 gain 0.1106 logloss statuts 0.8851 precision 0.5749
+epoque 3 perte 1.5029 | test : R2 gain 0.1139 logloss statuts 0.8819 precision 0.5782
+epoque 4 perte 1.5106 | test : R2 gain 0.1183 logloss statuts 0.8803 precision 0.5787
+epoque 5 perte 1.5048 | test : R2 gain 0.1209 logloss statuts 0.8793 precision 0.5797

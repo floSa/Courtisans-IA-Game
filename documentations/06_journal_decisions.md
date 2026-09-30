@@ -62,6 +62,24 @@ triplant les données), donc plus de parties de greedy, bon marché à générer
 
 ---
 
+## [2026-09-30] Cycle 7 — Augmentation + 108 000 parties, puis fin de partie
+
+*Exploratoire, seuils écrits avant mesure. Suite conditionnelle annoncée au cycle 6.*
+
+**Hypothèse H7a.** Avec l'augmentation, **plus de parties distinctes aident encore** : entraîner sur
+les 108 000 parties de greedy (6 époques) bat le cycle 6 (36 000 parties). Test : 2 graines,
+duel contre 2 × `meilleur.pt` (donnes 6 200 000+, 450 donnes) ; moyenne de référence du cycle 6 :
+**+0,070**. **Confirmée** si la moyenne des 2 graines ≥ +0,10 ; **infirmée** si < +0,07 (les
+données ne sont plus le facteur limitant une fois augmentées).
+
+**Hypothèse H7b.** La fin de partie (1 tour, 32 mondes) s'ajoute encore au meilleur réseau
+augmenté : hybride contre le réseau seul ≥ +0,05 (comme +0,099 au cycle 4), contre 2 greedys et
+contre `meilleur.pt` sur donnes neuves (6 700 000+, 450 donnes).
+
+**Résultat.** *(à venir)*
+
+---
+
 ## [2026-09-30] Cycle 6 — Augmentation par permutation des familles
 
 *Exploratoire, seuils écrits avant mesure. Motif : le goulot identifié au cycle 3 est le nombre de
@@ -86,7 +104,40 @@ graines 0,015. Test : 3 graines avec augmentation, **mêmes donnes**, mêmes opt
 
 **Suite conditionnelle (non engagée).** Si confirmée : refaire avec les 108 000 parties.
 
-**Résultat.** *(à venir)*
+**Résultat.** 3 graines avec augmentation, 36 000 parties de greedy, 6 époques, agent statuts ×1 +
+valeur ×10. Donnes 6 400 000+ (mêmes que la référence), 450 donnes.
+`experiences/resultats/cycle6_*`, réseaux `experiences/modeles/graines/aug_1..3.pt`.
+
+| | Sans augmentation (3 graines) | **Avec augmentation (3 graines)** |
+|---|---:|---:|
+| R² du gain sur le test | 0,099 (à 2 époques, optimum) | **0,121 / 0,122 / 0,121** (monte à chaque époque, aucun surapprentissage à 6) |
+| Précision du statut final | 0,567 | 0,580 |
+| Gain contre 2 greedys | +0,359 (écart-type 0,015) | **+0,496** [+0,449 ; +0,535] / +0,505 / +0,491 (écart-type 0,008) |
+| Écart apparié (moyenne des 3) | — | **+0,137 [+0,103 ; +0,174]** |
+
+**Duel contre 2 × `meilleur.pt`** (donnes 6 200 000+, 450 donnes) — le cycle 3 (108 000 parties,
+sans augmentation) y faisait −0,009 :
+
+| Graine | Gain | IC 99 % | Victoires seules |
+|---|---:|---|---:|
+| 1 | +0,060 | [+0,010 ; +0,109] | 32,7 % |
+| 2 | +0,093 | [+0,048 ; +0,140] | 35,4 % |
+| 3 | +0,058 | [+0,011 ; +0,105] | 32,0 % |
+| moyenne | **+0,070** | | |
+
+**Décision : H6 CONFIRMÉE, largement.** Les deux seuils sont franchis (moyenne +0,496 ≥ +0,389 ;
+R² 0,121 > 0,099), sur 3 graines cohérentes. Et l'agent **bat `meilleur.pt` en duel sur les trois
+graines**, chacune avec borne basse > 0, sans calcul de fin de partie et avec trois fois moins
+de parties que le cycle 3 : c'est le premier résultat qui dépasse `meilleur.pt` au sens de la
+règle du dépôt (écart > 0,05 répliqué sur ≥ 3 graines).
+
+**Lecture.** Le goulot du cycle 3 était bien le nombre de parties **distinctes** : la permutation des
+familles (règle C18) multiplie par jusqu'à 720 les variantes de chaque vue, gratuitement. Avec
+elle, 36 000 parties égalent ou dépassent 108 000 sans elle.
+
+**Réserves.** Un seul réglage d'augmentation, un seul jeu de données ; R² toujours faible en
+absolu (0,12 : le jeu reste très aléatoire) ; adversaires = greedy et `meilleur.pt`, pas un humain.
+
 
 ---
 
