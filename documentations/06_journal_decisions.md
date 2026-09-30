@@ -16,6 +16,98 @@ Impact plan : phases invalidées ou modifiées
 
 ---
 
+## [2026-09-30] Cycle 1 — Le greedy probabiliste : prédire le statut final des familles
+
+*Régime exploratoire (`experiences/`), seuils écrits avant toute mesure. Origine : piste n° 1 de
+[PISTES.md](../experiences/PISTES.md). Ménage préalable : le worktree `Courtisans_pilote`
+(instantané de `main` au 24/08, lien `.git` cassé depuis le renommage du dépôt) est supprimé ;
+`main` est intact.*
+
+**Hypothèses.**
+
+- **H1a (prévisibilité).** Le statut final d'une famille se prédit *mieux* que « le statut actuel
+  restera », dès qu'il reste au moins 4 tours à jouer. Mesure : précision du statut sur des
+  parties de test jamais vues, par tour restant.
+- **H1b (le signal est moins bruité).** L'écart de score final se reconstruit à partir des
+  statuts prédits (par calcul) avec un R² **supérieur** à celui d'une tête « écart » apprise
+  directement sur les mêmes données (R² du gain de V : 0,05 à 0,09).
+- **H1c (jouer).** L'agent qui note chaque action par l'écart espéré via les statuts prédits bat
+  2 greedys. C'est le test décisif.
+
+**Instrument.** `experiences/statuts.py`. Données : parties du jeu complet (90 cartes),
+greedy avec ε = 0,1, donnes 9 000 000+ (disjointes de l'arène et de `donnees.py`). Test :
+8 % de parties de fin de fichier, coupe sur une frontière de partie. Témoin : même réseau
+entraîné sans la tête de statuts. Arène habituelle (900 parties, donnes 5 000 000+).
+
+**Seuils (fixés avant de mesurer).**
+
+| | Confirmée si | Infirmée si |
+|---|---|---|
+| H1a | précision réseau ≥ précision « statut actuel » + 2 points pour 4 à 6 tours restants | écart < 1 point pour 4 à 6 tours restants |
+| H1b | R² via statuts ≥ R² tête écart + 0,05 sur le test entier | inférieur ou égal |
+| H1c | gain contre 2 greedys, borne basse de l'IC 99 % > 0 : « ça marche » ; > +0,289 (`meilleur.pt`) : « ça remplace » | borne basse ≤ 0 |
+
+**Ce qu'on ne saura pas d'emblée.** Le test H1c se fait avec des données de greedy (hors
+distribution d'un agent appris) : un échec de H1c seul n'infirme pas l'idée, il dirait que
+les données ne suffisent pas. La suite logique, si H1a/H1b tiennent : la tête de statuts
+comme cible auxiliaire dans `iteration.py`.
+
+**Résultat.** Données : 36 000 parties de greedy (ε = 0,1), 5,3 M de vues ; test = parties de fin
+de fichier, jamais vues. Détail : `experiences/resultats/cycle1_prevision.txt`,
+`cycle1_confirmation.jsonl`, `arene.jsonl`.
+
+*Incident d'entraînement, à retenir.* Avec 12 000 parties et 6 époques, tout est en surapprentissage
+(R² du gain négatif, y compris pour le témoin) : le premier verdict de H1b (−0,107) ne
+mesurait pas l'idée. Le suivi du test par époque (ajouté à `entrainer`) montre l'optimum à
+1-2 époques ; les chiffres ci-dessous sont à 36 000 parties, 2 époques.
+
+- **H1a : CONFIRMÉE.** Précision du statut final, réseau contre « le statut actuel restera » :
+  4 tours restants 0,581 vs 0,535 ; 5 tours 0,563 vs 0,515 ; 6 tours 0,541 vs 0,486, soit +4,6 à
+  +5,5 points (seuil : 2). Sur tout le test : 0,569 vs 0,504, perte de log 0,894 (constante :
+  1,060). Dès le début de partie (10 tours restants) : 0,439 vs 0,251.
+- **H1b : INFIRMÉE telle qu'énoncée.** R² de l'écart final via les statuts : −0,077, contre 0,135
+  pour la tête d'écart apprise directement. Le calcul améliore pourtant nettement le
+  décompte du greedy (−0,558), et cet écart n'est pas absurde : la formule ignore les cartes qui
+  seront encore posées dans les domaines. Le R² absolu n'est pas ce qui compte pour un agent qui
+  classe des actions ; c'est H1c qui tranche. (Seuil non modifié après coup : H1b reste infirmée.)
+- **H1c : CONFIRMÉE au sens « ça marche », et au-delà.** Contre 2 greedys, 900 parties, donnes
+  5 000 000+ :
+
+| Agent | Gain | IC 99 % |
+|---|---:|---|
+| statuts seuls | +0,148 | [+0,092 ; +0,205] |
+| témoin (réseau sans tête de statuts, valeur seule) | +0,178 | [+0,124 ; +0,233] |
+| réseau à statuts, valeur seule (têtes de gain et d'écart) | +0,288 | [+0,232 ; +0,343] |
+| **statuts ×1 + valeur ×10** | **+0,381** | [+0,321 ; +0,442] |
+| `meilleur.pt` | +0,300 | [+0,241 ; +0,360] |
+
+  **Découverte principale, non prévue par les hypothèses :** la tête de statuts, utilisée
+  seulement pendant l'entraînement, fait passer la valeur seule de +0,178 à +0,288 (mêmes
+  données, mêmes époques, IC presque disjoints). C'est la cible dense (6 étiquettes par vue au
+  lieu d'une) qui régularise, et non seulement le calcul du greedy probabiliste.
+  Le mélange (pondérations 10 puis 30, 100, 0,3/10, 0,1/10 : de +0,33 à +0,38) est un plateau.
+
+- **Confirmation sur donnes neuves** (6 000 000+, 450 donnes, réglage gelé : statuts ×1, valeur
+  ×10) : agent +0,377 [+0,330 ; +0,425] contre `meilleur.pt` +0,321 [+0,272 ; +0,371] ;
+  écart apparié +0,056 [−0,009 ; +0,120] (non significatif). **Duel direct contre 2 × `meilleur.pt`
+  (donnes 6 100 000+) : −0,009 [−0,050 ; +0,036] : égalité.**
+
+**Audit.** Le réglage a été choisi sur les donnes d'exploration (biaisé vers le haut : +0,381) ;
+la confirmation neuve (+0,377) le tient. Pas de fuite : l'agent note la vue d'après-coup du
+siège qui décide, avec mondes tirés à l'aveugle au ciblage (comme `agent_valeur`) ; les valeurs
+de domaine viennent de `vue_domaines`, qui ignore les dos adverses. Limite : un seul réseau, une
+seule graine ; 5 configurations de pondération essayées (comparaisons multiples, d'où la
+confirmation).
+
+**Décision.** **Go.** L'idée « statuts finaux » vaut par la cible auxiliaire plus que par le
+calcul. Un réseau entraîné en quelques minutes sur des parties de greedy égale `meilleur.pt`
+(des heures de TD(λ)). Il n'est pas encore meilleur en duel.
+
+**Impact plan.** Piste n° 1 de PISTES.md : faite, à cocher. Cycle 2 : les données jouées par ces
+agents (et non par le greedy), boucle d'amélioration avec la tête de statuts.
+
+---
+
 ## [2026-09-27] Reprise — revue critique, et changement de méthode : chercher, puis apprendre
 
 **Statut, en premier parce qu'il conditionne la lecture.** Cette entrée rend compte d'une
