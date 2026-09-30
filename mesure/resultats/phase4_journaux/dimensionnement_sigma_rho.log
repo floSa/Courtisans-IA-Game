@@ -1,0 +1,13 @@
+passe 1 : 6000 parties  gain -0.0169 IC [-0.0367 ; +0.0028]  sigma 0.6483  rho -0.0978  effet 0.8044  -- 73.2 s
+passe 2 : 6000 parties  gain -0.0132 IC [-0.0328 ; +0.0065]  sigma 0.6479  rho -0.0799  effet 0.8403  -- 74.2 s
+passe 3 : 6000 parties  gain +0.0065 IC [-0.0125 ; +0.0265]  sigma 0.6561  rho -0.0939  effet 0.8122  -- 74.4 s
+
+sigma  : [0.6483124126337548, 0.6478510296335279, 0.6561328929903522]   etendue 0.6479-0.6561
+rho    : [-0.09780498541108142, -0.07985788132412025, -0.09387799420086552]   etendue -0.0978--0.0799
+effet  : [0.8043900291778372, 0.8402842373517595, 0.812244011598269]   etendue 0.8044-0.8403
+gain   : [-0.016875, -0.013208333333333334, 0.006458333333333333]   (attendu ~0 : trois copies du meme agent)
+duree  : [73.2, 74.2, 74.4] s   etendue 73.2-74.4 s pour 6000 parties
+
+ecart detectable a   6000 parties : +0.0257 a +0.0262
+ecart detectable a  12000 parties : +0.0181 a +0.0185
+ecart detectable a  24000 parties : +0.0128 a +0.0131

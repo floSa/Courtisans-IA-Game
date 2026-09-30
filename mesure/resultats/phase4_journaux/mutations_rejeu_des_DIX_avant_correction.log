@@ -1,0 +1,18 @@
+passe de BASE, sans mutation : 1276 verts, 0 rouges (cible 'tests')
+TEMOIN, edition sans effet (20 fichiers mutes) : 1276 verts, 0 rouges
+
+mutation                                  verts  rouges  verdict
+--------------------------------------------------------------------------------------
+perception-decide-sur-un-noeud-de-chance   1274       2  detectee
+valeur-non-aplatie                         1274       2  detectee
+politique-reseau-observe-le-siege-zero     1276       0  SURVIT -- trou de test
+avantage-sans-ligne-de-base                1275       1  detectee
+tete-plus-grande-que-l-espace-d-action     1275       1  detectee
+garde-fou-se-contente-d-un-ecart-etabli    1275       1  detectee
+garde-fou-sans-bonferroni                  1275       1  detectee
+pool-garde-les-plus-anciens                1275       1  detectee
+masse-binomiale-part-de-zero               1265      11  detectee
+adversaires-partagent-un-alea              1274       2  detectee
+--------------------------------------------------------------------------------------
+1 mutation(s) non detectee(s) sur 10. **C'est un RESULTAT, pas un echec de l'outil** : chacune nomme un trou de la suite de tests, et se rapporte telle quelle.
+  - politique-reseau-observe-le-siege-zero (agents/politique_reseau.py) : l'agent decide sur le tenseur du siege 0 quel que soit le siege qu'il occupe -- il voit la main d'un autre

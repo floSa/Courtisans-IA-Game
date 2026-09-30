@@ -16,6 +16,546 @@ Impact plan : phases invalidées ou modifiées
 
 ---
 
+## [2026-09-30] Cycle 2 — Auto-jeu avec la tête de statuts : l'agent progresse-t-il sur ses propres parties ?
+
+*Exploratoire, seuils écrits avant mesure. Suite du cycle 1 : l'agent à statuts égale
+`meilleur.pt` en duel (−0,009 [−0,050 ; +0,036]) en n'ayant vu que des parties de greedy.*
+
+**Hypothèse H2.** Réentraîner le réseau à statuts (depuis zéro, 2 époques) sur les données
+d'une **ligue** jouée par l'agent lui-même (auto-jeu 35 %, contre greedy 25 %, contre
+`meilleur.pt` 20 %, contre la génération précédente 20 %), ajoutées aux parties de greedy,
+produit un agent qui **bat l'agent du cycle 1 en duel**, et que la progression se poursuit sur
+3 générations.
+
+**Instrument.** `experiences/cycle.py`. 12 000 parties par génération (ε = 0,05), plafond
+6 M de vues (les plus anciennes sous-échantillonnées par partie). Jugement, donnes fixes :
+contre 2 greedys (450 donnes, 6 000 000+) et en duel contre l'agent du cycle 1 (450 donnes,
+6 100 000+). Final : duel contre `meilleur.pt` sur donnes neuves (6 200 000+, 600 donnes).
+
+**Seuils.**
+
+| | Confirmée si | Infirmée si |
+|---|---|---|
+| H2 | après 3 générations, duel contre l'agent du cycle 1 > 0 avec borne basse IC 99 % > 0, et ≥ +0,40 contre 2 greedys | duel ≤ 0 (borne haute ≤ 0 : régression) ou aucun progrès sur les 3 générations (gains dans le bruit, ±0,05) |
+
+**Résultat.** 3 générations de 12 000 parties de ligue (≈ 5 min par génération, `experiences/resultats/cycle2.jsonl`).
+Donnes de jugement fixes ; 1 350 parties par ligne.
+
+| Génération | Contre 2 greedys | Duel contre l'agent du cycle 1 |
+|---|---|---|
+| (cycle 1, rappel) | +0,377 [+0,330 ; +0,425] | — |
+| 1 | +0,277 [+0,228 ; +0,323] | +0,033 [−0,014 ; +0,076] |
+| 2 | +0,264 [+0,219 ; +0,308] | +0,021 [−0,019 ; +0,062] |
+| 3 | +0,304 [+0,260 ; +0,348] | +0,011 [−0,029 ; +0,051] |
+
+**Décision : H2 INFIRMÉE.** Aucun duel n'a sa borne basse au-dessus de 0, aucune génération
+n'atteint +0,40 contre les greedys, et le gain contre les greedys est même **plus bas** que celui
+du cycle 1 (plafond de 6 M vues : les parties de greedy sont sous-échantillonnées, et les
+données de ligue ne compensent pas). Le réentraînement depuis zéro sur des parties de l'agent
+ne fait pas progresser, en 3 générations.
+
+**Ce que ça dit.** Le goulot n'est pas « d'où viennent les parties » (mêmes limites que la
+boucle TD : plateau de la valeur autour de R² ≈ 0,09), et nous n'avons pas testé de variante à
+gardien ni à TD(λ) ici : la conclusion vaut pour *cette* boucle simple. Hypothèse suivante,
+la plus économique : le signal étiqueté manque (le cycle 1 passait de R² 0,079 à 0,091 en
+triplant les données), donc plus de parties de greedy, bon marché à générer.
+
+---
+
+## [2026-09-30] Contrôle de robustesse — la variation d'un entraînement à l'autre
+
+*Question de l'auteur : les runs sont-ils assez longs pour que les résultats soient significatifs ?
+Constat préalable : tous les IC 99 % affichés mesurent le hasard des **parties** ; aucun ne
+mesurait celui de l'**entraînement** (un seul réseau par variante, aucune graine répétée).*
+
+**Hypothèse.** L'effet de la tête de statuts (cycle 1 : +0,178 → +0,288) dépasse la variation
+d'un entraînement à l'autre. Infirmée si l'écart entre variantes est du même ordre que l'écart-type
+entre graines.
+
+**Instrument.** 3 graines × {avec tête de statuts, sans}, 36 000 parties, 2 époques, chaque réseau
+joué contre 2 greedys sur 450 donnes neuves (6 400 000+).
+
+| Variante | Graine 1 | Graine 2 | Graine 3 | Moyenne | Écart-type entre graines |
+|---|---:|---:|---:|---:|---:|
+| sans statuts, valeur seule | +0,180 | +0,176 | +0,156 | +0,171 | 0,013 |
+| avec statuts, valeur seule | +0,312 | +0,296 | +0,284 | +0,297 | 0,014 |
+| avec statuts, statuts ×1 + valeur ×10 | +0,365 | +0,371 | +0,342 | +0,359 | 0,015 |
+
+**Résultat : confirmé.** L'écart avec / sans statuts (+0,126) fait environ 9 écarts-types entre
+graines ; aucune des trois graines « sans » n'atteint la plus basse des « avec ». Le mélange
+(+0,359) tient aussi sur trois graines. **La découverte du cycle 1 est réelle, et non un tirage
+favorable.**
+
+**Ce que cela fixe pour lire tous les cycles.** L'incertitude de l'entraînement est d'environ
+**±0,015** (1 écart-type, donc ≈ ±0,03 à 2 écarts-types) contre 2 greedys. Elle s'ajoute à celle
+des parties (IC 99 % de ±0,04 à 450 donnes). Conséquences : (a) les différences de 0,02-0,04
+entre deux réseaux entraînés une fois (cycle 3 contre cycle 1 en duel : +0,037 ; cycle 4
+contre `meilleur.pt` : +0,046) **ne sont pas établies** ; (b) les écarts de 0,1 et plus (aide de
+la tête de statuts, fin de partie contre le réseau seul : +0,099, mesure sur un même réseau donc
+sans variation d'entraînement) **le sont**.
+
+**Limites connues du protocole.** Un seul jeu de données par taille ; réglages de pondération
+choisis sur des donnes d'exploration, puis confirmés sur des donnes neuves mais **les plages
+6 000 000-6 300 000 ont resservi d'un cycle à l'autre** ; la variation d'entraînement n'est
+mesurée que pour le cycle 1 (36 000 parties), pas pour les cycles 3 et 4 ; les adversaires
+(greedy, `meilleur.pt`) ne sont pas un humain.
+
+**Décision.** Protocole conservé, avec trois règles à partir de maintenant : (1) tout écart
+annoncé en dessous de 0,05 est étiqueté « non établi » tant qu'il n'est pas répliqué sur au
+moins 3 graines ; (2) la conclusion « bat `meilleur.pt` » attend ce contrôle sur le cycle 4 ;
+(3) donnes de confirmation neuves à chaque conclusion.
+
+---
+
+## [2026-09-30] Cycle 4 — Le calcul de fin de partie sur le réseau à statuts
+
+*Exploratoire, seuils écrits avant mesure. Le plateau du cycle 3 (égalité avec `meilleur.pt`
+en duel, quels que soient la source et le nombre de parties) suggère qu'il faut de la
+recherche, pas de la donnée. La fin de partie donnait +0,088 [+0,034 ; …] sur `meilleur.pt`.*
+
+**Hypothèse H4.** L'agent hybride (`experiences/fin_de_partie.py`, désormais avec
+`statuts=True`) : réseau `statuts_s3_e2` (statuts ×1 + valeur ×10) tant qu'il reste plus d'un
+tour, puis simulation jusqu'au bout de chaque coup dans 32 mondes tirés à l'aveugle,
+adversaires simulés par le même réseau (`rollout='valeur'`). Il **bat le réseau seul** en duel
+d'au moins +0,05, et **bat `meilleur.pt`**.
+
+**Instrument.** Arène habituelle, donnes neuves : duel hybride contre 2 × `statuts_s3_e2`
+(450 donnes, 6 300 000+) ; duel contre 2 × `meilleur.pt` (450 donnes, 6 200 000+, à comparer au
+−0,009 du réseau seul sur les mêmes donnes) ; contre 2 greedys (300 donnes, 6 000 000+).
+
+| | Confirmée si | Infirmée si |
+|---|---|---|
+| H4 | duel contre le réseau seul ≥ +0,05, borne basse IC 99 % > 0 ; et duel contre `meilleur.pt` avec borne basse > 0 | duel contre le réseau seul ≤ +0,02 |
+
+**Résultat.** Hybride = `statuts_s3_e2` + fin de partie (1 tour, 32 mondes, adversaires simulés par
+le réseau). ~20 s par donne de 3 parties sur 11 processus ; `experiences/resultats/cycle4_arene.jsonl`.
+
+| Adversaires | Donnes | Gain de l'hybride | IC 99 % | Victoires seules |
+|---|---|---:|---|---:|
+| 2 × `statuts_s3_e2` (le réseau seul) | 6 300 000+, 450 | **+0,099** | [+0,064 ; +0,135] | 35,0 % |
+| 2 × `meilleur.pt` | 6 200 000+, 450 | **+0,046** | [+0,001 ; +0,093] | 32,1 % |
+| 2 greedys | 6 000 000+, 300 | **+0,470** | [+0,420 ; +0,518] | 60,8 % |
+
+Rappel : le réseau seul faisait −0,009 [−0,049 ; +0,030] contre `meilleur.pt` (mêmes donnes) et
++0,455 contre les greedys (donnes 6 000 000+, 600 donnes).
+
+**Décision : H4 CONFIRMÉE, avec une réserve.** Contre le réseau seul, +0,099 est près du double du
+seuil (+0,05), borne basse nettement positive. Contre `meilleur.pt`, la borne basse est positive
+mais à +0,001 : le seuil est franchi à la limite, sur 450 donnes ; il faut un rejeu plus
+large pour parler de « bat `meilleur.pt` » sans réserve. Le gain de la fin de partie est
+plus fort ici (+0,099) que sur `meilleur.pt` (+0,088) alors que l'adversaire est plus fort.
+
+**L'agent jouable à ce jour** : `experiences.fin_de_partie:fin_de_partie` avec
+`chemin='experiences/modeles/statuts_s3_e2.pt', statuts=True, tours_fin=1, nb_mondes=32,
+rollout='valeur'`. Quelques secondes par coup, uniquement au dernier tour.
+
+**Impact plan.** Piste n° 1 (statuts) et n° 3 (agent jouable) de PISTES.md : faites. La suite
+qui a du sens, dans l'ordre : (a) rejouer le duel contre `meilleur.pt` sur plus de donnes ;
+(b) la fin de partie *dans l'entraînement* (n° 2), qui coûte trop cher en Python ; (c) le moteur
+rapide (n° 4), toujours en attente d'accord, qui débloque (b) et la recherche profonde.
+
+
+---
+
+## [2026-09-30] Cycle 3 — Plus de données étiquetées : trois fois plus de parties de greedy
+
+*Exploratoire, seuils écrits avant mesure.*
+
+**Hypothèse H3.** Le réseau à statuts entraîné sur **108 000** parties de greedy (36 000 existantes
++ 72 000 nouvelles, donnes 9 500 000+), au lieu de 36 000, donne un agent meilleur : le
+R² du gain sur le test monte au-dessus de 0,10 et l'agent bat l'agent du cycle 1 en duel.
+
+**Instrument.** Même réseau, mêmes pondérations (statuts ×1, valeur ×10). Époques : 2 puis 3,
+avec suivi du test. Jugement : duel contre l'agent du cycle 1 (600 donnes, 6 100 000+) et
+contre 2 greedys (600 donnes, 6 000 000+).
+
+| | Confirmée si | Infirmée si |
+|---|---|---|
+| H3 | duel ≥ +0,04 avec borne basse IC 99 % > 0, et R² du gain test ≥ 0,10 | duel ≤ +0,02 : les données ne sont plus le facteur limitant |
+
+**Résultat.** 108 000 parties de greedy, 15,9 M de vues. Le surapprentissage revient dès la
+3ᵉ époque (R² du gain sur le test : 0,110, 0,106, 0,092) ; on garde 1 et 2 époques
+(`statuts_s3_e1.pt`, `statuts_s3_e2.pt`). Sur le **même** test (fin de `greedy_b2`, jamais vu par
+les trois modèles) :
+
+| Modèle | R² du gain | R² de la tête d'écart | Précision du statut |
+|---|---:|---:|---:|
+| cycle 1 (36 000 parties, 2 époques) | 0,099 | 0,136 | 0,567 |
+| cycle 3, 1 époque | 0,116 | 0,158 | 0,573 |
+| cycle 3, 2 époques | 0,114 | 0,159 | 0,573 |
+
+Jeu (statuts ×1, valeur ×10, 600 donnes = 1 800 parties par ligne) :
+
+| Modèle | Contre 2 greedys | Duel contre l'agent du cycle 1 | Duel contre 2 × `meilleur.pt` |
+|---|---|---|---|
+| cycle 1 (rappel, donnes 6 000 000+ / 450 donnes) | +0,377 [+0,330 ; +0,425] | — | −0,009 [−0,050 ; +0,036] |
+| cycle 3, 1 époque | **+0,440** [+0,401 ; +0,480] | +0,037 [+0,000 ; +0,075] | — |
+| cycle 3, 2 époques | **+0,455** [+0,417 ; +0,493] | +0,034 [−0,004 ; +0,071] | −0,009 [−0,049 ; +0,030] |
+
+**Décision : H3 NON TRANCHÉE, tendance positive.** Le seuil de R² (≥ 0,10) est atteint ; le seuil
+du duel (≥ +0,04, borne basse > 0) ne l'est pas strictement (+0,037 avec borne basse à 0,000 ;
++0,034 avec −0,004), sans tomber dans la zone d'infirmation (≤ +0,02). Les données aident : de
++0,377 à +0,44/+0,455 contre les greedys, la meilleure mesure obtenue contre lui à ce jour.
+
+**Point d'attention : non-transitivité.** Contre `meilleur.pt`, le résultat est identique au cycle 1
+(−0,009), alors que le gain contre les greedys a grimpé de 0,08. Battre mieux le greedy n'est pas
+battre mieux `meilleur.pt` : les deux adversaires ne sont pas interchangeables, et les deux
+mesures sont à suivre à chaque cycle. Il y a un plateau commun, autour de l'égalité avec
+`meilleur.pt`, que ni la source des parties (cycle 2) ni leur nombre (cycle 3) ne fait bouger.
+
+**Impact plan.** L'agent `statuts_s3_e2` devient la référence contre le greedy. Pour dépasser
+`meilleur.pt` en duel, il faut autre chose que de la donnée : le calcul de fin de partie
+(+0,088 mesuré sur `meilleur.pt`, jamais essayé sur ce réseau), puis la recherche.
+
+
+---
+
+## [2026-09-30] Cycle 1 — Le greedy probabiliste : prédire le statut final des familles
+
+*Régime exploratoire (`experiences/`), seuils écrits avant toute mesure. Origine : piste n° 1 de
+[PISTES.md](../experiences/PISTES.md). Ménage préalable : le worktree `Courtisans_pilote`
+(instantané de `main` au 24/08, lien `.git` cassé depuis le renommage du dépôt) est supprimé ;
+`main` est intact.*
+
+**Hypothèses.**
+
+- **H1a (prévisibilité).** Le statut final d'une famille se prédit *mieux* que « le statut actuel
+  restera », dès qu'il reste au moins 4 tours à jouer. Mesure : précision du statut sur des
+  parties de test jamais vues, par tour restant.
+- **H1b (le signal est moins bruité).** L'écart de score final se reconstruit à partir des
+  statuts prédits (par calcul) avec un R² **supérieur** à celui d'une tête « écart » apprise
+  directement sur les mêmes données (R² du gain de V : 0,05 à 0,09).
+- **H1c (jouer).** L'agent qui note chaque action par l'écart espéré via les statuts prédits bat
+  2 greedys. C'est le test décisif.
+
+**Instrument.** `experiences/statuts.py`. Données : parties du jeu complet (90 cartes),
+greedy avec ε = 0,1, donnes 9 000 000+ (disjointes de l'arène et de `donnees.py`). Test :
+8 % de parties de fin de fichier, coupe sur une frontière de partie. Témoin : même réseau
+entraîné sans la tête de statuts. Arène habituelle (900 parties, donnes 5 000 000+).
+
+**Seuils (fixés avant de mesurer).**
+
+| | Confirmée si | Infirmée si |
+|---|---|---|
+| H1a | précision réseau ≥ précision « statut actuel » + 2 points pour 4 à 6 tours restants | écart < 1 point pour 4 à 6 tours restants |
+| H1b | R² via statuts ≥ R² tête écart + 0,05 sur le test entier | inférieur ou égal |
+| H1c | gain contre 2 greedys, borne basse de l'IC 99 % > 0 : « ça marche » ; > +0,289 (`meilleur.pt`) : « ça remplace » | borne basse ≤ 0 |
+
+**Ce qu'on ne saura pas d'emblée.** Le test H1c se fait avec des données de greedy (hors
+distribution d'un agent appris) : un échec de H1c seul n'infirme pas l'idée, il dirait que
+les données ne suffisent pas. La suite logique, si H1a/H1b tiennent : la tête de statuts
+comme cible auxiliaire dans `iteration.py`.
+
+**Résultat.** Données : 36 000 parties de greedy (ε = 0,1), 5,3 M de vues ; test = parties de fin
+de fichier, jamais vues. Détail : `experiences/resultats/cycle1_prevision.txt`,
+`cycle1_confirmation.jsonl`, `arene.jsonl`.
+
+*Incident d'entraînement, à retenir.* Avec 12 000 parties et 6 époques, tout est en surapprentissage
+(R² du gain négatif, y compris pour le témoin) : le premier verdict de H1b (−0,107) ne
+mesurait pas l'idée. Le suivi du test par époque (ajouté à `entrainer`) montre l'optimum à
+1-2 époques ; les chiffres ci-dessous sont à 36 000 parties, 2 époques.
+
+- **H1a : CONFIRMÉE.** Précision du statut final, réseau contre « le statut actuel restera » :
+  4 tours restants 0,581 vs 0,535 ; 5 tours 0,563 vs 0,515 ; 6 tours 0,541 vs 0,486, soit +4,6 à
+  +5,5 points (seuil : 2). Sur tout le test : 0,569 vs 0,504, perte de log 0,894 (constante :
+  1,060). Dès le début de partie (10 tours restants) : 0,439 vs 0,251.
+- **H1b : INFIRMÉE telle qu'énoncée.** R² de l'écart final via les statuts : −0,077, contre 0,135
+  pour la tête d'écart apprise directement. Le calcul améliore pourtant nettement le
+  décompte du greedy (−0,558), et cet écart n'est pas absurde : la formule ignore les cartes qui
+  seront encore posées dans les domaines. Le R² absolu n'est pas ce qui compte pour un agent qui
+  classe des actions ; c'est H1c qui tranche. (Seuil non modifié après coup : H1b reste infirmée.)
+- **H1c : CONFIRMÉE au sens « ça marche », et au-delà.** Contre 2 greedys, 900 parties, donnes
+  5 000 000+ :
+
+| Agent | Gain | IC 99 % |
+|---|---:|---|
+| statuts seuls | +0,148 | [+0,092 ; +0,205] |
+| témoin (réseau sans tête de statuts, valeur seule) | +0,178 | [+0,124 ; +0,233] |
+| réseau à statuts, valeur seule (têtes de gain et d'écart) | +0,288 | [+0,232 ; +0,343] |
+| **statuts ×1 + valeur ×10** | **+0,381** | [+0,321 ; +0,442] |
+| `meilleur.pt` | +0,300 | [+0,241 ; +0,360] |
+
+  **Découverte principale, non prévue par les hypothèses :** la tête de statuts, utilisée
+  seulement pendant l'entraînement, fait passer la valeur seule de +0,178 à +0,288 (mêmes
+  données, mêmes époques, IC presque disjoints). C'est la cible dense (6 étiquettes par vue au
+  lieu d'une) qui régularise, et non seulement le calcul du greedy probabiliste.
+  Le mélange (pondérations 10 puis 30, 100, 0,3/10, 0,1/10 : de +0,33 à +0,38) est un plateau.
+
+- **Confirmation sur donnes neuves** (6 000 000+, 450 donnes, réglage gelé : statuts ×1, valeur
+  ×10) : agent +0,377 [+0,330 ; +0,425] contre `meilleur.pt` +0,321 [+0,272 ; +0,371] ;
+  écart apparié +0,056 [−0,009 ; +0,120] (non significatif). **Duel direct contre 2 × `meilleur.pt`
+  (donnes 6 100 000+) : −0,009 [−0,050 ; +0,036] : égalité.**
+
+**Audit.** Le réglage a été choisi sur les donnes d'exploration (biaisé vers le haut : +0,381) ;
+la confirmation neuve (+0,377) le tient. Pas de fuite : l'agent note la vue d'après-coup du
+siège qui décide, avec mondes tirés à l'aveugle au ciblage (comme `agent_valeur`) ; les valeurs
+de domaine viennent de `vue_domaines`, qui ignore les dos adverses. Limite : un seul réseau, une
+seule graine ; 5 configurations de pondération essayées (comparaisons multiples, d'où la
+confirmation).
+
+**Décision.** **Go.** L'idée « statuts finaux » vaut par la cible auxiliaire plus que par le
+calcul. Un réseau entraîné en quelques minutes sur des parties de greedy égale `meilleur.pt`
+(des heures de TD(λ)). Il n'est pas encore meilleur en duel.
+
+**Impact plan.** Piste n° 1 de PISTES.md : faite, à cocher. Cycle 2 : les données jouées par ces
+agents (et non par le greedy), boucle d'amélioration avec la tête de statuts.
+
+---
+
+## [2026-09-27] Reprise — revue critique, et changement de méthode : chercher, puis apprendre
+
+**Statut, en premier parce qu'il conditionne la lecture.** Cette entrée rend compte d'une
+séance **exploratoire** : rien n'y a été pré-inscrit ni audité par une conversation distincte.
+Les chiffres sont mesurés sur une arène calibrée, se rejouent par une commande, et chaque
+contrôle d'aveuglement porte son témoin positif. Mais aucun ne vaut verdict au sens du §0 du
+protocole. Détail, commandes et limites : [experiences/REVUE_CRITIQUE.md](../experiences/REVUE_CRITIQUE.md).
+
+**Hypothèse (a posteriori, et dite telle).** L'agent de la phase 3 n'est pas battu parce que
+son critique est imprécis, mais parce que (1) sa tête d'action ne peut pas représenter une
+partie des décisions, et (2) un apprentissage sans modèle, sur un gain ±1 épars, se prive du
+simulateur parfait et de l'information majoritairement publique qui font la force du greedy.
+
+**Instrument.** `experiences/arene.py` : gain moyen contre deux adversaires, sièges permutés,
+IC 99 % bootstrap par donne, donnes 5 000 000+, données d'apprentissage 8 000 000+. Contrôle du
+niveau nul : greedy contre greedy, +0,007, IC [−0,032 ; +0,046]. Concordance avec le dépôt : le
+PPO de la phase 3 y rend −0,185, IC [−0,226 ; −0,144], contre −0,164 publié.
+
+**Résultat.**
+
+- **Le ciblage de l'Assassin est aveugle dans le tenseur.** Sur 14 368 nœuds de ciblage en jeu
+  greedy, 9 246 (64 %) offrent au moins deux cibles d'identités différentes, et dans 100 % de
+  ces cas, inverser l'ordre d'arrivée des cartes change la carte désignée par chaque indice
+  sans changer le tenseur d'un bit. La dette n° 2 du README (« l'encodage par cible n'est pas
+  écrit ») n'était pas une dette de confort : le réseau de la phase 3 choisissait sa victime
+  sans la connaître. Un test de caractérisation le tient désormais
+  (`tests/experiences/test_experiences.py`).
+- **Une recherche sans aucun apprentissage bat le greedy.** PIMC (mondes tirés à l'aveugle,
+  rollouts greedy) : +0,129 avec 8 mondes, +0,194 avec 24, instance réduite.
+- **Une valeur de précision médiocre bat le greedy, si l'on note des conséquences et non des
+  indices.** L'agent « d'après-coup » clone l'état, joue chaque action légale et note la vue
+  qui en résulte par un réseau V. R² ≈ 0,18 — l'ordre de grandeur du critique jugé « mauvais »
+  en phase 3 —, et il gagne +0,149, IC [+0,105 ; +0,194], instance réduite, après 12 min de
+  données greedy et 1 min de GPU. **Sur le jeu complet à 90 cartes : +0,169, IC
+  [+0,112 ; +0,227]**, 60 000 parties greedy. Le PPO avait consommé 1 486 336 parties.
+- **Une recherche qui simule le greedy exploite le greedy.** Contre deux agents de valeur,
+  PIMC fait −0,018 et recherche + valeur +0,013 : leur avance contre le greedy tenait en bonne
+  partie à un modèle d'adversaire exact.
+- **Non-transitivité.** v2, entraînée sur l'auto-jeu de v1, bat deux v1 (+0,114, IC
+  [+0,071 ; +0,160]) et recule contre le greedy (+0,095 contre +0,120).
+
+**Audit (interne, et un défaut trouvé dans le livrable même).** La première version de l'agent
+d'après-coup **trichait au ciblage** : jouer « tuer le dos n° i » sur l'état réel révèle la
+victime, la défausse étant publique. Correctif : noter chaque ciblage en moyenne sur des mondes
+re-tirés à l'aveugle. 0 décision sur 2 988 ne dépend plus de l'identité réelle des dos ; le
+témoin, l'ancienne version, en dépendait 514 fois. Les chiffres publiés sont ceux de la version
+corrigée, et l'écart était faible (v1 : +0,128 → +0,120). **Un agent qui simule le futur sur
+l'état réel est une porte que la preuve d'aveuglement du greedy ne couvrait pas** : elle
+vérifie ce que l'agent *lit*, pas ce qu'il *simule*.
+
+**Ce qui revient sur une conclusion antérieure.** L'entrée de la phase 3 écrivait « la valeur
+n'est pas imprédictible dans ce jeu : **le critique est mauvais** », sur un plancher de 0,57
+calculé sur l'état complet. La phase 4 a réfuté le remède sans l'entraîner, ce qui est à son
+crédit. Mais le diagnostic lui-même était de trop : **à λ = 1, le critique ne sert qu'à réduire
+la variance de l'avantage, dans la proportion de son R²**, et la mesure du 27/09 montre qu'une
+valeur de même précision suffit à gagner quand elle sert à choisir.
+
+**Décision. PIVOT D'ALGORITHME.** La ligne « PPO à tête d'indices d'action » est **abandonnée,
+pas itérée** — l'itération 2 de la phase 4, tête auxiliaire, n'est pas lancée. La suite est
+l'**itération experte** : une valeur d'après-coup apprise en auto-jeu contre une ligue, puis
+une recherche qui simule ses adversaires par la politique apprise, distillée à son tour.
+Le **jeu complet** devient l'instance de travail : la méthode y marche, et l'instance réduite
+n'a que 12 poses par partie.
+
+**Impact plan.**
+
+1. Deux régimes : **exploratoire** (arène figée, essais en minutes, `experiences/`) et
+   **confirmatoire** (pré-inscription et audit croisé), réservé à ce qu'on veut affirmer.
+2. Le juge devient une **ligue** — greedy, ancre `c1b`, générations précédentes — et plus le
+   seul greedy.
+3. `torch` et `numpy` sont déclarés (groupe `ia` de `pyproject.toml`) : le PPO de la phase 3
+   n'était plus reproductible depuis le lock.
+4. `experiences/rapide.py` : tenseur 2,5× plus rapide, **égal bit à bit** à `infoset.tenseur`
+   (52 181 comparaisons, quatre configurations). Le moteur reste la référence ; un portage plus
+   rapide se ferait sous la même suite de conformité.
+
+**Enseignements de méthode.**
+
+- **Un défaut annoncé comme dette doit être confronté au livrable qui la traverse.** La dette
+  n° 2 était écrite au README ; la phase 3 a entraîné sur elle.
+- **Un juge unique exploitable se fait exploiter.** Toute recherche qui simule le greedy
+  « bat » le greedy. Le contrôle est de la juger contre un adversaire qu'elle ne simule pas.
+- **Avant de réparer un organe, calculer ce qu'il peut rapporter au mieux.** Le gain maximal
+  d'un meilleur critique à λ = 1 se bornait sur papier.
+
+**Addendum du soir — la boucle d'auto-jeu, jeu complet.** Détail : §5 de la revue.
+
+- **Deux échecs, chacun mesuré et corrigé.** v1 dérive : chaque génération exploite la
+  précédente (gen 2 perd contre gen 1, −0,053). v2 perd contre le greedy (−0,075), parce que la
+  valeur dépend des adversaires (c1b : R² = −0,12 sur les parties entre agents appris) et que
+  la ligue, tirée siège par siège, ne produisait « 2 greedys en face » qu'une partie sur 16.
+  Correctif : **un contexte par partie**.
+- **Le gardien avait deux défauts**, un cliquet (tolérance cumulée) puis une malédiction du
+  gagnant (plancher = maximum de mesures bruitées). Le premier est corrigé, le second
+  documenté.
+- **Plateau en Monte-Carlo ; TD(λ = 0,7) le débloque.** Contre 2 greedys : +0,148 → +0,220 →
+  +0,247 → +0,303 → +0,328. Un réseau plus gros n'aide pas (trois tailles plafonnent à
+  R² ≈ 0,057), une recherche à un tour non plus (+0,038, IC [−0,053 ; +0,133]). **La limite
+  est le bruit de la cible et le nombre de parties** ; le tenseur en une passe, égal bit à
+  bit à l'officiel, double le débit.
+- **Tournoi à 8, 20 160 parties : classement monotone avec l'entraînement.** La meilleure,
+  `experiences/modeles/meilleur.pt` : +0,289 IC 99 % [+0,236 ; +0,341] contre 2 greedys,
+  48,8 % de victoires seules (greedy à sa place : 28,5 %).
+
+**Enseignement.** À trois joueurs, **la distribution des adversaires pendant l'apprentissage
+est un hyperparamètre de premier ordre**, au même titre que l'algorithme : elle a fait passer
+la même boucle d'une perte à un gain contre le greedy.
+
+---
+
+## [2026-08-24] Phase 4, itération 1 — La tête de valeur : hypothèse réfutée avant l'entraînement
+
+**Hypothèse.** *Pré-inscrite dans `prompts/18_phase4_iteration_1.md`, avant tout code.* Le
+critique de la phase 3 n'apprend pas — `perte_valeur` 0,3923 → 0,3908, `R² = +0,093` quand
+**0,57** est calculé comme atteignable — et **ce n'est pas la faute du jeu** : à l'avant-dernière
+décision le plancher irréductible vaut 0,0075 pendant que le critique fait 0,30, un facteur
+quarante. Donc : **le critique est mal spécifié ou sous-entraîné, et le réparer est un levier**.
+
+**Instrument.** Le seuil qui devait décider n'était pas le R² : c'était le gain moyen contre
+**deux copies de l'agent de la phase 3**, sièges permutés, borne basse de l'IC 99 % bootstrap par
+donne strictement positive. Le R² n'était qu'un seuil **intermédiaire, diagnostique**, et
+`prompts/21` §1 l'a formulé comme un **écart apparié** contre le critique de la phase 3 sur le
+même échantillon hors plage — jamais comme un niveau. Le piège était écrit dès la première ligne
+du prompt : **on peut faire monter le R² sans que l'agent joue mieux.**
+
+**Résultat. L'hypothèse est RÉFUTÉE, et elle l'est sans qu'un seul entraînement ait été lancé.**
+
+- **Le critique de la phase 3 est à ~0,02 du plafond de ce qu'un observateur aveugle atteint dans
+  ce jeu.** Un régresseur supervisé ordinaire, ajusté hors ligne sur `(info-set, retour)` avec
+  accès libre aux mêmes données, ne le dépasse que de **+0,0205**.
+- **Le critique, +0,1012** — sur le jeu de test **fixe** : 76 799 nœuds issus de 4 000 parties de
+  self-play à trois copies de `models/phase3/final.pt` (SHA-256 `772a869f…f0217`), **hors plage
+  d'entraînement**, seeds 7 400 000+. Mesuré aussi à +0,1008 sur 76 842 nœuds, seeds 7 000 000+,
+  et +0,1033 sur un troisième bloc.
+- **Le plafond, +0,1217** — même test fixe, régresseur à deux couches cachées de largeur 128,
+  ajusté sur **1 536 135 nœuds** (80 000 parties, seeds 7 000 000+). **L'arrêt précoce est choisi
+  SUR LE JEU DE TEST : c'est une borne haute optimiste**, délibérément, parce qu'une borne haute
+  optimiste qui reste basse est un résultat plus fort qu'une mesure honnête qui reste basse.
+- **La pente : +0,0079 de R² par DOUBLEMENT des données**, stable sur trois intervalles — +0,0082
+  (76 842 → 307 273 nœuds), +0,0081 (→ 767 906), +0,0075 (→ 1 536 135).
+- **Conséquence chiffrée : atteindre 0,545 demanderait 53 doublements, soit 1,8 × 10²² nœuds.**
+  **Ce n'est pas une prédiction, c'est une réduction à l'absurde** — elle établit que 0,545 n'est
+  pas une question de volume, pas que le nombre 53 signifie quoi que ce soit.
+
+**Et voici ce que tout ce résultat porte, en toutes lettres. Le plancher de 0,545 est calculé sur
+l'état COMPLET. L'écart entre +0,12 et 0,545 n'est ni un manque de données, ni un défaut de
+modèle, ni une tête de valeur mal faite : c'est ce que le jeu CACHE à un joueur honnête.** Le
+prompt de la phase l'avait écrit d'avance — « un critique qui voit l'état complet n'est pas
+utilisable à l'inférence, et le plancher de 0,57 est calculé sur l'état complet précisément pour
+cette raison ». La mesure lui donne raison et chiffre l'écart.
+
+**Ce que la mesure INFIRME.** Le soupçon « la tête de valeur manque de capacité » est **faux dans
+le sens attendu : plus de capacité EMPIRE la généralisation.** Largeur 256 sur 76 818 nœuds
+descend à **−0,9161** en test pendant que son R² d'apprentissage monte à +0,4630. Chez le pilote,
+qui a réimplémenté indépendamment, la largeur 128 fait moins bien que la largeur 32 **aux trois
+volumes**. Le critique ne sous-ajuste pas : il est au bord du sur-ajustement.
+
+**Ce qui garde son diagnostic et perd son remède.** Le soupçon « la cible terminale vue depuis
+n'importe quelle profondeur » reste juste sur le constat — le critique est presque nul tôt,
+`R² = +0,0086` au rang 0. Mais **les nœuds tardifs, ceux du facteur quarante, pèsent 8,2 % de la
+perte** (76 842 nœuds, seeds 7 000 000+), et la marge `MSE − plancher` pondérée par la population
+est **répartie** : les rangs 0–3 en portent 53 %. **Pondérer la perte vers la profondeur viserait
+8 % du problème.** Au passage, la pondération évidente par `1/plancher` donne **93 % de la masse**
+au rang 8, qui est mesuré sur **un seul état**.
+
+**Corroboration indépendante du 0,57.** Le plancher par rang, mesuré à la méthode de l'auditeur —
+300 états × 24 replicats, 7 200 parties — recombiné avec la population donne
+`E[plancher] = 0,193` pour `Var(R) = 0,4239`, soit **0,545 atteignable**. L'auditeur publiait
+**0,57** par une autre méthode et un autre découpage.
+
+**Audit. Le pilote a refait la mesure avec sa propre implémentation, et elle tient.** Régresseur,
+séparation des seeds, arrêt précoce et R² écrits par lui sans lire `mesure/phase4.py` ; seeds
+d'apprentissage 500 000+, de test 900 000+, disjoints et tous deux hors plage. Critique à
+**+0,0958** chez lui contre +0,1012 chez moi ; pente **+0,0078 à +0,0091** contre +0,0079 ; et
+**extrapolée depuis son point à 461 k nœuds, sa pente prédit +0,121 à 1,54 M quand ma mesure
+donne +0,1217**. Deux implémentations indépendantes sur la même courbe, à la troisième décimale.
+
+**L'audit croisé de la phase 4 — conversation n° 9 — reste à faire, et son travail sera de refaire
+ce plafond sans lire une ligne de `mesure/phase4.py`.** Un résultat qui **ferme une direction**
+mérite d'être établi deux fois.
+
+**Décision. L'ITÉRATION 1 EST CLOSE SUR LE CONSTAT. Le run de 2 h ne se lance pas.** Le
+raisonnement, pour qu'il soit auditable : le seuil intermédiaire **est franchissable**, la marge
+existe et vaut ~+0,02 ; mais **le seuil intermédiaire ne décide rien**, et rien n'établit qu'une
+précision de 0,12 fasse gagner là où 0,10 fait perdre. Lancer le run reviendrait à payer 2 h pour
+déplacer une grandeur intermédiaire dont on ignore si elle commande le résultat. C'est le piège de
+la phase sous une forme plus fine : non plus « faire monter le R² sans jouer mieux », mais **faire
+monter le R² de deux centièmes en espérant que ça compte**.
+
+**Ce que la phase 4 itération 1 produit n'est donc pas un agent, c'est un résultat négatif
+solide** — et `prompts/18` le désignait d'avance comme publiable : *« un critique réparé qui ne
+fait pas gagner établirait que le critique n'était pas la limite »*. La mesure fait mieux : elle
+établit **qu'il n'y avait presque rien à réparer**.
+
+**Ce que ce constat N'ÉTABLIT PAS.**
+
+1. **Qu'un R² plus élevé ferait gagner.** Rien ici ne mesure le jeu. Le lien entre la précision du
+   critique et le gain de l'agent n'est ni mesuré ni supposé — il est **inconnu**, et c'est
+   exactement pourquoi le seuil décisif est le gain et pas le R².
+2. **Que l'architecture testée soit la meilleure possible.** Un perceptron à deux couches cachées
+   sous Adam, trois largeurs, jusqu'à 1,5 M nœuds. Une autre classe de modèle, une autre
+   représentation ou un objectif auxiliaire pourraient faire mieux — et la tête auxiliaire est
+   explicitement l'itération 2.
+3. **Que la pente reste linéaire au-delà de 1,5 M nœuds.** Trois intervalles ne font pas une loi.
+4. **Que `E[Var(R | info-set)]` ait été mesuré.** Le plancher de 0,193 est conditionné à l'état
+   **complet**. Le vrai plafond d'un critique aveugle est **estimé par ajustement**, ce qui en
+   fait une borne **basse** : un meilleur modèle ferait mieux.
+5. **Que la tête de valeur soit sans défaut.** Elle est près de son plafond d'information ; ce
+   n'est pas la même chose qu'être bien faite.
+
+**Impact plan.**
+
+1. **La direction « réparer le critique » est FERMÉE pour cet agent et cette observation.** Elle
+   ne se rouvre que par un changement de ce que l'agent VOIT — donc par le paragraphe 4.2 de la
+   spécification, qui est un arbitrage de périmètre et non une itération.
+2. **L'itération 2 — tête auxiliaire, régression sur l'écart de score final — n'est pas invalidée
+   par ce constat**, parce qu'elle ne prédit pas la même quantité. Mais elle hérite de la
+   question : *ce qu'elle prédirait est-il visible depuis un info-set ?* **Elle se mesure avant de
+   se pré-inscrire.**
+3. **Le budget d'entraînement n'est toujours pas désigné**, et ce constat ne le désigne pas
+   davantage.
+4. **`mesure/phase4.py` et ses 11 cas restent** : ils servent au constat et serviront à l'audit.
+   Ils portent l'empreinte SHA-256 de l'adversaire du seuil décisif, sa recette, et l'égalité
+   d'échelle de l'avantage.
+
+**Ce que l'étape 0 de la phase a produit, et qui vaut au-delà d'elle.** Le périmètre des mutations
+est passé de **20 à 57** motifs, `agents/` et `mesure/` compris, `agents/greedy.py` excepté :
+**45 détectées, 11 survivantes, 1 expirée**, relevé reproduit à l'identique par deux campagnes
+valides. **Les onze sont aujourd'hui toutes tombées**, et `EXPIRE` a disparu — la suite a
+désormais un délai de garde **par test**, 58,8 s = 4 × 14,70 s mesurées sur trois passes. Les
+**trois réserves de la phase 3** sont levées, chacune avec sa parade. Cinq jeux de campagne ont
+été payés, **quatre pour des défauts de l'instrument** et un seul du premier coup.
+
+**Quatre enseignements de méthode.**
+
+- **Quand une phase repose sur une marge supposée, la marge se mesure AVANT de se pré-inscrire.**
+  Le plan disait : pré-inscrire, puis entraîner. En mesurant le plafond d'abord, la marge est
+  apparue à ~+0,02 au lieu du ~+0,45 que le 0,57 laissait croire. **En suivant le plan, on aurait
+  pré-inscrit un seuil sur une marge crue large, payé 2 h d'entraînement, et découvert la marge
+  ensuite.** L'ordre du plan n'était pas faux : il était incomplet d'une étape.
+- **Un invariant se tient à TOUS ses sites, pas à un site.** Deux mutations ont survécu au cas
+  écrit pour elles, pour la même raison les deux fois : `agents/politique_reseau.py` a **trois**
+  sites et le cas n'en visitait qu'un ; l'intitulé du garde-fou demandait **deux parades qui ne se
+  remplacent pas** — l'une contre les collisions, l'autre contre un nom qui ne dit rien. Écrire un
+  test depuis l'invariant et non depuis la mutation est nécessaire, et **ne suffit pas**.
+- **Un prédicat ne se teste pas sur les seules données qui le rendent vrai.** Les quatre cas du
+  taux dégénéré étaient testés — tous avec des données **séparables** du côté à un seul dégénéré.
+  Un calcul qui aurait rendu « disjoints » quoi qu'il arrive passait les quatre.
+- **Une conclusion tirée trop tôt porte la même faute qu'un chiffre sans population.** À 307 000
+  nœuds la marge a été annoncée à +0,005 ; à 1,5 M elle vaut +0,0205, quatre fois plus. Le chiffre
+  était exact **sur sa population**, et la phrase qui l'annonçait ne la nommait pas.
+
+---
+
 ## [2026-08-21] Phase 3 — Le premier agent entraîné
 
 **Hypothèse.** *Écrite et commitée avant tout entraînement,

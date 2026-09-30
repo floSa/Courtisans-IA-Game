@@ -255,6 +255,13 @@ class Comparaison:
             le lecteur doit savoir laquelle.
         borne_exacte: pour une ligne tranchee par `REGLE_BORNES_EXACTES`, la borne du cote
             degenere -- borne **haute** d'un zero, borne **basse** d'un cent. `None` sinon.
+        separation: la `SeparationExacte` entiere de cette ligne, ou `None`. **Elle porte le
+            COTE degenere, que `borne_exacte` seule ne dit pas** -- et c'est la reserve 2 de
+            la phase 3 : le rendu ne recevait qu'un nombre, donc il ecrivait « le zero de la
+            ligne de base » sur les quatre cas, y compris quand le degenere est du cote de
+            l'agent, ou quand c'est un cent, ou quand les deux cotes le sont. Un rendu ne peut
+            pas nommer ce qu'on ne lui donne pas ; le defaut etait dans le cablage, pas dans
+            la phrase.
         parties_requises: pour une ligne **non separable**, le nombre de parties qu'il
             faudrait de chaque cote pour separer l'ecart observe. `None` sinon. C'est la
             regle « hors budget » de la pre-inscription, rendue lisible au lieu d'etre une
@@ -272,6 +279,7 @@ class Comparaison:
     borne_exacte: float | None
     parties_requises: int | None
     exclu: str | None
+    separation: "SeparationExacte | None" = None
 
 
 #: Les compteurs exclus **par le texte de leur definition**, quel que soit le budget. Le critere
@@ -637,6 +645,7 @@ def comparer(
         # conclu ; l'absence de calcul vaut `None`, et le rendu leve dessus.
         separable: bool | None
         borne_exacte: float | None = None
+        separation: SeparationExacte | None = None
         if exclu is not None:
             separable, regle = None, REGLE_EXCLUE
         elif ecart is None:
@@ -655,6 +664,7 @@ def comparer(
             else:
                 separable, regle = exacte.disjoints, REGLE_BORNES_EXACTES
                 borne_exacte = exacte.borne
+                separation = exacte
 
         requises = (
             parties_requises(
@@ -675,6 +685,7 @@ def comparer(
                 borne_exacte=borne_exacte,
                 parties_requises=requises,
                 exclu=exclu,
+                separation=separation,
             )
         )
     return resultats

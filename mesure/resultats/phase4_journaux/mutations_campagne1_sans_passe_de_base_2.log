@@ -1,0 +1,21 @@
+mutation                                  verts  rouges  verdict
+--------------------------------------------------------------------------------------
+masse-binomiale-part-de-zero                  -       -  EXPIRE apres 900 s -- la suite ne rend pas la main
+clopper-pearson-borne-basse-unilaterale    1168       4  detectee
+r2-devient-r0                              1164       8  detectee
+r3-ignore-le-statut-final                  1167       5  detectee
+vue-d-un-siege-voit-tous-les-espions       1168       4  detectee
+part-fractionnee-ne-somme-plus-a-un        1167       5  detectee
+quantile-sans-bonferroni                   1164       8  detectee
+sieges-non-permutes                        1167       5  detectee
+adversaires-partagent-un-alea              1172       0  SURVIT -- trou de test
+gain-lu-au-siege-zero                      1171       1  detectee
+separation-exacte-toujours-disjointe       1172       0  SURVIT -- trou de test
+b4-strict-avale-le-departage               1171       1  detectee
+b4-meurtre-couteux-au-mauvais-denominateur   1171       1  detectee
+--------------------------------------------------------------------------------------
+1 mutation(s) ont fait EXPIRER la suite. **Ce n'est ni une detection ni une survie** : la suite n'a rendu aucun verdict, et elle n'a pas de delai de garde propre -- un blocage y est indiscernable d'une lenteur.
+  - masse-binomiale-part-de-zero (mesure/binomiale.py) : la recurrence part de k = 0 : pour n = 10 000 le premier terme vaut 1e-1760, donc zero en flottant, et toute la loi se normalise a partir de rien
+2 mutation(s) non detectee(s) sur 13. **C'est un RESULTAT, pas un echec de l'outil** : chacune nomme un trou de la suite de tests, et se rapporte telle quelle.
+  - adversaires-partagent-un-alea (mesure/phase3.py) : les deux adversaires partagent un generateur : ils jouent de facon correlee, ce qui n'est pas la composition annoncee
+  - separation-exacte-toujours-disjointe (mesure/phase3_mesure.py) : toute ligne portant un zero est declaree separable, meme quand les deux bornes se croisent

@@ -9,6 +9,15 @@ dependencies = []
 # open_spiel n'est utilise que par l'adaptateur et ses tests. Le coeur ne l'importe pas :
 # le critere A4 le verifie dans un sous-processus.
 dev = ["pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.6", "open_spiel>=1.5"]
+ia = [
+    "numpy>=1.26",
+    "torch>=2.4",
+]
+
+[tool.uv]
+# `ia` porte torch et numpy : les agents appris et `experiences/`. Installe par defaut pour
+# que `uv run` ne retire pas torch d'un environnement ou tourne un entrainement.
+default-groups = ["dev", "ia"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -16,6 +25,7 @@ pythonpath = ["."]
 markers = [
     "lent: cas qui joue un gros volume de parties (critere A3)",
     "refus: cas qui exige le refus d'une construction non conforme (critere A8) -- leur compte EST le chiffre annonce pour A8",
+    "minuteur(secondes): delai de garde propre a ce cas, en secondes. Se pose AVEC la mesure qui le justifie, ecrite dans la docstring du cas -- voir tests/conftest.py",
 ]
 
 [tool.ruff]

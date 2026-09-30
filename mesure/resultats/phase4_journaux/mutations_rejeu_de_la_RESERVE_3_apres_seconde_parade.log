@@ -1,0 +1,8 @@
+passe de BASE, sans mutation : 1290 verts, 0 rouges (cible 'tests')
+TEMOIN, edition sans effet (20 fichiers mutes) : 1290 verts, 0 rouges
+
+mutation                                  verts  rouges  verdict
+--------------------------------------------------------------------------------------
+intitule-du-garde-fou-sans-population      1288       2  detectee
+--------------------------------------------------------------------------------------
+1 mutation(s), toutes detectees -- lues contre une passe de base a 1290 verts et 0 rouges.

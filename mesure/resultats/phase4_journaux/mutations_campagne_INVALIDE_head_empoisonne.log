@@ -1,0 +1,146 @@
+passe de BASE, sans mutation : 1248 verts, 0 rouges (cible 'tests')
+TEMOIN, edition sans effet (20 fichiers mutes) : 1248 verts, 0 rouges
+
+mutation                                  verts  rouges  verdict
+--------------------------------------------------------------------------------------
+espions-adverses-visibles                  1169      79  detectee
+phase-et-assassin-absents                  1159      89  detectee
+residu-compte-les-morts                    1169      79  detectee
+meurtre-obligatoire                        1105     143  detectee
+fin-joueur-par-joueur                      1098     150  detectee
+noble-vaut-un                              1124     124  detectee
+points-au-poseur                           1139     109  detectee
+morts-comptes-au-decompte                  1148     100  detectee
+main-non-triee                             1152      96  detectee
+doublons-non-masques                       1157      91  detectee
+observation-sans-joueur                    1096     152  detectee
+observateur-absent                         1152      96  detectee
+libelle-de-cible-ambigu                    1154      94  detectee
+libelle-nomme-un-dos                       1159      89  detectee
+bornes-de-joueurs-desynchronisees          1168      80  detectee
+player-obligatoire                         1165      83  detectee
+chaine-de-jeu-sans-config                  1157      91  detectee
+roles-separes-par-virgule                  1156      92  detectee
+tours-arrondis-au-dessus                   1118     130  detectee
+vue-du-joueur-contourne-la-parade          1125     123  detectee
+perception-nomme-les-dos                   1169      79  detectee
+perception-decide-sur-un-noeud-de-chance   1169      79  detectee
+masque-laisse-une-probabilite-aux-illegales   1163      85  detectee
+tirer-ne-verifie-plus-la-somme             1168      80  detectee
+valeur-non-aplatie                         1169      79  detectee
+deterministe-ignore-le-masque              1168      80  detectee
+politique-reseau-observe-le-siege-zero     1169      79  detectee
+charger-laisse-le-reseau-en-entrainement   1168      80  detectee
+gain-du-siege-zero                         1168      80  detectee
+noeuds-du-pool-collectes                   1168      80  detectee
+avantage-sans-ligne-de-base                1169      79  detectee
+alea-de-partie-partage                     1168      80  detectee
+composition-toujours-self-play             1168      80  detectee
+tete-plus-grande-que-l-espace-d-action     1169      79  detectee
+garde-fou-de-portee-un                     1165      83  detectee
+garde-fou-se-contente-d-un-ecart-etabli    1169      79  detectee
+garde-fou-sans-bonferroni                  1169      79  detectee
+pool-garde-les-plus-anciens                1169      79  detectee
+intitule-du-garde-fou-sans-population      1169      79  detectee
+garde-fou-se-compare-a-lui-meme            1166      82  detectee
+progres-etabli-redevient-etabli            1168      80  detectee
+percentiles-apparies-unilateraux           1168      80  detectee
+rho-sur-des-groupes-inegaux                1168      80  detectee
+appariement-par-rang-de-valeur             1165      83  detectee
+masse-binomiale-part-de-zero                  -       -  EXPIRE apres 900 s -- la suite ne rend pas la main
+clopper-pearson-borne-basse-unilaterale    1165      83  detectee
+r2-devient-r0                              1161      87  detectee
+r3-ignore-le-statut-final                  1164      84  detectee
+vue-d-un-siege-voit-tous-les-espions       1165      83  detectee
+part-fractionnee-ne-somme-plus-a-un        1164      84  detectee
+quantile-sans-bonferroni                   1161      87  detectee
+sieges-non-permutes                        1163      85  detectee
+adversaires-partagent-un-alea              1169      79  detectee
+gain-lu-au-siege-zero                      1168      80  detectee
+separation-exacte-toujours-disjointe       1169      79  detectee
+b4-strict-avale-le-departage               1168      80  detectee
+b4-meurtre-couteux-au-mauvais-denominateur   1168      80  detectee
+--------------------------------------------------------------------------------------
+
+!! 78 test(s) sont tombes sous les 56 mutations jouees. **Un test qui tombe sous toutes ne reagit a aucune** : il reagit le plus souvent au fait qu'un fichier a ete edite, il se deguise en detection sur toutes les lignes, et il efface les survivantes du releve. La passe de base ne peut pas le voir. A LIRE avant de croire ce releve :
+  - tests/agents/test_aveuglement.py::test_p3_la_decision_ne_depend_d_aucune_information_cachee[0]
+  - tests/agents/test_aveuglement.py::test_p3_la_decision_ne_depend_d_aucune_information_cachee[1]
+  - tests/agents/test_aveuglement.py::test_p3_la_decision_ne_depend_d_aucune_information_cachee[2]
+  - tests/agents/test_aveuglement.py::test_p3_la_decision_ne_depend_d_aucune_information_cachee[3]
+  - tests/agents/test_aveuglement.py::test_p3_la_decision_ne_depend_d_aucune_information_cachee[4]
+  - tests/agents/test_aveuglement.py::test_p3_la_decision_ne_depend_d_aucune_information_cachee[5]
+  - tests/agents/test_aveuglement.py::test_p3_la_decision_ne_depend_d_aucune_information_cachee[6]
+  - tests/agents/test_aveuglement.py::test_p3_la_decision_ne_depend_d_aucune_information_cachee[7]
+  - tests/agents/test_aveuglement_reseau.py::test_p3_la_decision_ne_depend_d_aucune_information_cachee[0]
+  - tests/agents/test_aveuglement_reseau.py::test_p3_la_decision_ne_depend_d_aucune_information_cachee[1]
+  - tests/agents/test_aveuglement_reseau.py::test_p3_la_decision_ne_depend_d_aucune_information_cachee[2]
+  - tests/agents/test_aveuglement_reseau.py::test_p3_la_decision_ne_depend_d_aucune_information_cachee[3]
+  - tests/agents/test_aveuglement_reseau.py::test_p3_la_decision_ne_depend_d_aucune_information_cachee[4]
+  - tests/agents/test_aveuglement_reseau.py::test_p3_la_decision_ne_depend_d_aucune_information_cachee[5]
+  - tests/agents/test_aveuglement_reseau.py::test_p3_la_decision_ne_depend_d_aucune_information_cachee[6]
+  - tests/agents/test_aveuglement_reseau.py::test_p3_la_decision_ne_depend_d_aucune_information_cachee[7]
+  - tests/agents/test_aveuglement_reseau.py::test_p3_sur_l_agent_ENTRAINE[0]
+  - tests/agents/test_aveuglement_reseau.py::test_p3_sur_l_agent_ENTRAINE[1]
+  - tests/agents/test_aveuglement_reseau.py::test_p3_sur_l_agent_ENTRAINE[2]
+  - tests/agents/test_aveuglement_reseau.py::test_p3_sur_l_agent_ENTRAINE[3]
+  - tests/agents/test_aveuglement_reseau.py::test_p3_sur_l_agent_ENTRAINE[4]
+  - tests/agents/test_aveuglement_reseau.py::test_p3_sur_l_agent_ENTRAINE[5]
+  - tests/agents/test_aveuglement_reseau.py::test_p3_sur_l_agent_ENTRAINE[6]
+  - tests/agents/test_aveuglement_reseau.py::test_p3_sur_l_agent_ENTRAINE[7]
+  - tests/audit_phase2/test_greedy_auditeur.py::test_les_deux_etats_different_bien_et_seulement_par_le_dos
+  - tests/audit_phase2/test_greedy_du_constructeur.py::test_le_passage_en_public_de_vue_du_joueur_ne_change_ni_chaine_ni_tenseur
+  - tests/audit_phase2/test_greedy_du_constructeur.py::test_son_greedy_est_aveugle_sur_un_balayage_de_parties_entieres
+  - tests/audit_phase2/test_greedy_du_constructeur.py::test_son_greedy_evalue_a_l_identique_deux_plateaux_qui_ne_different_que_par_un_dos
+  - tests/conformite/test_c10_espions.py::test_c10_un_espion_est_invisible_pour_tous_sauf_son_poseur
+  - tests/infoset/test_encodage.py::test_chaque_bloc_vaut_ce_que_le_paragraphe_4_2_exige[entrainement-3j]
+  - tests/infoset/test_encodage.py::test_chaque_bloc_vaut_ce_que_le_paragraphe_4_2_exige[rapide-2j]
+  - tests/infoset/test_encodage.py::test_chaque_bloc_vaut_ce_que_le_paragraphe_4_2_exige[rapide-3j]
+  - tests/infoset/test_encodage.py::test_chaque_bloc_vaut_ce_que_le_paragraphe_4_2_exige[rapide-4j]
+  - tests/infoset/test_encodage.py::test_le_residu_diminue_quand_une_carte_meurt[entrainement-3j]
+  - tests/infoset/test_encodage.py::test_le_residu_diminue_quand_une_carte_meurt[rapide-2j]
+  - tests/infoset/test_encodage.py::test_le_residu_diminue_quand_une_carte_meurt[rapide-3j]
+  - tests/infoset/test_encodage.py::test_le_residu_diminue_quand_une_carte_meurt[rapide-4j]
+  - tests/infoset/test_vue_du_joueur.py::test_l_encodage_ne_consomme_que_cette_partition[0]
+  - tests/infoset/test_vue_du_joueur.py::test_l_encodage_ne_consomme_que_cette_partition[1]
+  - tests/infoset/test_vue_du_joueur.py::test_l_encodage_ne_consomme_que_cette_partition[2]
+  - tests/infoset/test_vue_du_joueur.py::test_la_partition_ne_perd_ni_ne_duplique_aucune_carte[0]
+  - tests/infoset/test_vue_du_joueur.py::test_la_partition_ne_perd_ni_ne_duplique_aucune_carte[1]
+  - tests/infoset/test_vue_du_joueur.py::test_la_partition_ne_perd_ni_ne_duplique_aucune_carte[2]
+  - tests/infoset/test_vue_du_joueur.py::test_la_partition_ne_perd_ni_ne_duplique_aucune_carte[3]
+  - tests/infoset/test_vue_du_joueur.py::test_la_partition_ne_perd_ni_ne_duplique_aucune_carte[4]
+  - tests/infoset/test_vue_du_joueur.py::test_le_nom_public_rend_la_partition_des_regles[0-1]
+  - tests/infoset/test_vue_du_joueur.py::test_le_nom_public_rend_la_partition_des_regles[0-2]
+  - tests/infoset/test_vue_du_joueur.py::test_le_nom_public_rend_la_partition_des_regles[0-3]
+  - tests/infoset/test_vue_du_joueur.py::test_le_nom_public_rend_la_partition_des_regles[0-4]
+  - tests/infoset/test_vue_du_joueur.py::test_le_nom_public_rend_la_partition_des_regles[1-0]
+  - tests/infoset/test_vue_du_joueur.py::test_le_nom_public_rend_la_partition_des_regles[1-2]
+  - tests/infoset/test_vue_du_joueur.py::test_le_nom_public_rend_la_partition_des_regles[1-3]
+  - tests/infoset/test_vue_du_joueur.py::test_le_nom_public_rend_la_partition_des_regles[1-4]
+  - tests/infoset/test_vue_du_joueur.py::test_le_nom_public_rend_la_partition_des_regles[2-0]
+  - tests/infoset/test_vue_du_joueur.py::test_le_nom_public_rend_la_partition_des_regles[2-1]
+  - tests/infoset/test_vue_du_joueur.py::test_le_nom_public_rend_la_partition_des_regles[2-2]
+  - tests/infoset/test_vue_du_joueur.py::test_le_nom_public_rend_la_partition_des_regles[2-3]
+  - tests/infoset/test_vue_du_joueur.py::test_le_nom_public_rend_la_partition_des_regles[2-4]
+  - tests/invariants/test_i07_infoset_ne_fuit_rien.py::test_i07_l_identite_d_un_espion_adverse_ne_fuit_pas[complet-4j-poseur0]
+  - tests/invariants/test_i07_infoset_ne_fuit_rien.py::test_i07_l_identite_d_un_espion_adverse_ne_fuit_pas[complet-4j-poseur1]
+  - tests/invariants/test_i07_infoset_ne_fuit_rien.py::test_i07_l_identite_d_un_espion_adverse_ne_fuit_pas[complet-4j-poseur2]
+  - tests/invariants/test_i07_infoset_ne_fuit_rien.py::test_i07_l_identite_d_un_espion_adverse_ne_fuit_pas[complet-4j-poseur3]
+  - tests/invariants/test_i07_infoset_ne_fuit_rien.py::test_i07_l_identite_d_un_espion_adverse_ne_fuit_pas[entrainement-3j-poseur0]
+  - tests/invariants/test_i07_infoset_ne_fuit_rien.py::test_i07_l_identite_d_un_espion_adverse_ne_fuit_pas[entrainement-3j-poseur1]
+  - tests/invariants/test_i07_infoset_ne_fuit_rien.py::test_i07_l_identite_d_un_espion_adverse_ne_fuit_pas[entrainement-3j-poseur2]
+  - tests/invariants/test_i07_infoset_ne_fuit_rien.py::test_i07_l_identite_d_un_espion_adverse_ne_fuit_pas[rapide-3j-poseur0]
+  - tests/invariants/test_i07_infoset_ne_fuit_rien.py::test_i07_l_identite_d_un_espion_adverse_ne_fuit_pas[rapide-3j-poseur1]
+  - tests/invariants/test_i07_infoset_ne_fuit_rien.py::test_i07_l_identite_d_un_espion_adverse_ne_fuit_pas[rapide-3j-poseur2]
+  - tests/invariants/test_i07_infoset_ne_fuit_rien.py::test_i07_l_identite_d_un_espion_adverse_ne_fuit_pas[rapide-4j-poseur0]
+  - tests/invariants/test_i07_infoset_ne_fuit_rien.py::test_i07_l_identite_d_un_espion_adverse_ne_fuit_pas[rapide-4j-poseur1]
+  - tests/invariants/test_i07_infoset_ne_fuit_rien.py::test_i07_l_identite_d_un_espion_adverse_ne_fuit_pas[rapide-4j-poseur2]
+  - tests/invariants/test_i07_infoset_ne_fuit_rien.py::test_i07_l_identite_d_un_espion_adverse_ne_fuit_pas[rapide-4j-poseur3]
+  - tests/invariants/test_i09_actions_par_infoset.py::test_i09_deux_etats_du_meme_info_set_offrent_les_memes_actions[complet-4j]
+  - tests/invariants/test_i09_actions_par_infoset.py::test_i09_deux_etats_du_meme_info_set_offrent_les_memes_actions[entrainement-3j]
+  - tests/invariants/test_i09_actions_par_infoset.py::test_i09_deux_etats_du_meme_info_set_offrent_les_memes_actions[rapide-3j]
+  - tests/invariants/test_i09_actions_par_infoset.py::test_i09_deux_etats_du_meme_info_set_offrent_les_memes_actions[rapide-4j]
+  - tests/outillage/test_mutation.py::test_chaque_motif_apparait_EXACTEMENT_une_fois_dans_son_fichier
+  - tests/outillage/test_mutation.py::test_chaque_version_mutee_reste_du_PYTHON_VALIDE
+
+1 mutation(s) ont fait EXPIRER la suite. **Ce n'est ni une detection ni une survie** : la suite n'a rendu aucun verdict, et elle n'a pas de delai de garde propre -- un blocage y est indiscernable d'une lenteur.
+  - masse-binomiale-part-de-zero (mesure/binomiale.py) : la recurrence part de k = 0 : pour n = 10 000 le premier terme vaut 1e-1760, donc zero en flottant, et toute la loi se normalise a partir de rien

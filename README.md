@@ -66,6 +66,27 @@ restaure les fichiers par `git checkout`.
 
 ---
 
+## Les agents qui jouent — `experiences/`
+
+Depuis le 27/09/2026, l'IA se construit dans `experiences/`, en régime exploratoire. Le
+moteur et la suite ci-dessus en restent la référence. Point d'entrée :
+[experiences/REVUE_CRITIQUE.md](experiences/REVUE_CRITIQUE.md).
+
+`uv sync` installe aussi le groupe `ia` (torch, numpy). Mesurer un agent sur le jeu complet,
+contre deux greedys, sièges permutés :
+
+```bash
+COURTISANS_INSTANCE=complete uv run python -m experiences.arene "experiences.valeur:agent_valeur:chemin='experiences/modeles/c1b.pt'" --donnes 300
+```
+
+Les garde-fous de ces agents (aveuglement, tenseur rapide identique à l'officiel) :
+
+```bash
+uv run pytest tests/experiences -q
+```
+
+---
+
 ## Ce qu'il y a dans le dépôt
 
 | Chemin | Contenu |

@@ -1,0 +1,15 @@
+apprentissage disponible : 307273 nœuds (16 000 parties, seeds 7000000+)
+test FIXE                : 76799 nœuds (4 000 parties, seeds 7400000+)
+collecte : 81.3 s
+
+ETALON -- critique de la phase 3 sur ce test : R2 +0.1012
+
+largeur  nœuds     meilleur R2 TEST   a l'epoque   R2 final   (apprentissage final)
+     32    76818           +0.0147            8    -0.2129              +0.0378
+     32   307273           +0.1061            3    +0.0883              +0.1631
+     64    76818           +0.0121            3    -0.2116              +0.0371
+     64   307273           +0.1026            2    +0.0615              +0.2054
+    256    76818           +0.0209            2    -0.9161              +0.0559
+    256   307273           +0.1061            3    -0.1113              +0.4630
+
+[exited with code 0]

@@ -1,0 +1,10 @@
+test FIXE : 76799 nœuds, seeds 7400000+
+ETALON -- critique de la phase 3 : R2 +0.1012
+
+parties   nœuds      meilleur R2 TEST   epoque   collecte   ajustement
+   4000      76842           +0.0871        3      16.2 s        2.9 s
+  16000     307273           +0.1035        4      68.1 s        5.8 s
+  40000     767906           +0.1142        2     162.7 s       11.8 s
+  80000    1536135           +0.1217        4     348.5 s       23.3 s
+
+[exited with code 0]

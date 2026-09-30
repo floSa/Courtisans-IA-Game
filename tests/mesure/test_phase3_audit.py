@@ -451,6 +451,21 @@ def _cle_d_un_intitule(valeur, chemin) -> str | None:
     devient la cle -- ce qui rapproche un litteral et un appel qui rendent la meme chaine.
     S'il n'est pas resoluble ou s'il leve, on retombe sur son texte source : deux appels
     ecrits pareil restent un doublon.
+
+    **Un appel QUALIFIE est resolu comme un appel nu, et c'est la reserve 3 de la phase 3.**
+    La version du tour 3 cherchait le nom de la fonction dans le module ou l'APPEL est ecrit :
+    pour `campagne_module.intitule_du_garde_fou()`, elle cherchait `intitule_du_garde_fou`
+    dans `mesure/phase3_mesure.py`, ou il n'existe pas -- seul `campagne_module` y existe. La
+    resolution echouait, la cle retombait sur le texte source, et le doublon passait.
+
+    **Ce n'est pas un cas de bord : c'est la seule forme que le depot ecrit.**
+    `mesure/phase3_mesure.py:887` -- le seul appel hors des tests -- traversait deja la parade.
+    Une garde qui ne couvre pas le style de son propre depot ne garde rien, et c'est la seconde
+    fois que cette parade est prise sur une forme syntaxique qu'elle ne voyait pas : le tour 2
+    ne lisait que les litteraux, le tour 3 ne lisait que les appels nus.
+
+    Le chemin qualifie est donc suivi **maillon par maillon** -- `a.b.c()` resout `a`, puis
+    `b`, puis `c` -- au lieu de ne garder que le dernier nom.
     """
     import ast
     import importlib
@@ -460,22 +475,106 @@ def _cle_d_un_intitule(valeur, chemin) -> str | None:
     if isinstance(valeur, ast.Constant):
         return valeur.value if isinstance(valeur.value, str) else None
     if isinstance(valeur, ast.Call):
-        nom = valeur.func.attr if isinstance(valeur.func, ast.Attribute) else getattr(
-            valeur.func, "id", None
-        )
-        if nom:
-            module = importlib.import_module(
-                str(chemin.with_suffix("")).replace("/", ".").replace("\\", ".")
-            )
-            fonction = getattr(module, nom, None)
-            if callable(fonction):
-                try:
-                    rendu = fonction()
-                except TypeError:  # des arguments sans defaut : on garde le texte source
-                    rendu = None
-                if isinstance(rendu, str):
-                    return rendu
+        fonction = _resoudre_l_appel(_chemin_pointe(valeur.func), chemin)
+        if callable(fonction):
+            try:
+                rendu = fonction()
+            except TypeError:  # des arguments sans defaut : on garde le texte source
+                rendu = None
+            if isinstance(rendu, str):
+                return rendu
     return ast.unparse(valeur)
+
+
+def _chemin_pointe(fonction) -> list[str] | None:
+    """`a.b.c` -> `['a', 'b', 'c']` ; `c` -> `['c']` ; toute autre forme -> `None`.
+
+    Rend le chemin **entier**, pas seulement son dernier maillon : c'est ce qui permet de
+    resoudre un appel qualifie depuis le module ou il est ecrit, et c'est la reserve 3.
+    """
+    import ast
+
+    maillons: list[str] = []
+    courant = fonction
+    while isinstance(courant, ast.Attribute):
+        maillons.append(courant.attr)
+        courant = courant.value
+    if isinstance(courant, ast.Name):
+        maillons.append(courant.id)
+        return list(reversed(maillons))
+    return None
+
+
+def _alias_declares(chemin) -> dict[str, str]:
+    """Les alias d'import d'un fichier : `alias -> chemin pointe complet`.
+
+    **Lus dans l'AST du fichier, et non dans les globales du module importe**, et c'est ce qui
+    fait la difference : `mesure/phase3_mesure.py` ecrit `from agents import campagne as
+    campagne_module` **a l'interieur d'une fonction**. L'alias n'est donc pas un attribut du
+    module, et une resolution par `getattr(module, alias)` echoue -- sans rien dire, en
+    retombant sur le texte source.
+
+    C'est la forme reelle du seul appel qualifie du depot. Une parade syntaxique qui ne lirait
+    que les imports de premier niveau raterait exactement celui qu'elle doit garder.
+    """
+    import ast
+
+    alias: dict[str, str] = {}
+    arbre = ast.parse(chemin.read_text(encoding="utf-8"))
+    for noeud in ast.walk(arbre):
+        if isinstance(noeud, ast.Import):
+            for nom in noeud.names:
+                alias[nom.asname or nom.name.split(".")[0]] = nom.name
+        elif isinstance(noeud, ast.ImportFrom) and noeud.module and noeud.level == 0:
+            for nom in noeud.names:
+                alias[nom.asname or nom.name] = f"{noeud.module}.{nom.name}"
+    return alias
+
+
+def _resoudre_l_appel(chemin_pointe, chemin):
+    """L'objet appelable designe par `a.b.c`, ou `None` s'il ne se resout pas.
+
+    Deux routes, dans cet ordre, parce qu'aucune des deux ne couvre l'autre :
+
+    1. **les alias d'import declares dans le fichier** -- la seule qui voie un import local a
+       une fonction, donc la seule qui voie l'appel qualifie que le depot ecrit ;
+    2. **les attributs du module importe** -- la route du tour 3, qui voit un appel nu produit
+       par un `from ... import` de premier niveau.
+
+    Aucune ne leve : une expression qui ne se resout pas retombe sur son texte source, et deux
+    appels ecrits pareil restent un doublon.
+    """
+    import importlib
+
+    if not chemin_pointe:
+        return None
+
+    def _descendre(objet, maillons):
+        for maillon in maillons:
+            objet = getattr(objet, maillon, None)
+            if objet is None:
+                return None
+        return objet
+
+    alias = _alias_declares(chemin)
+    if chemin_pointe[0] in alias:
+        pointe = alias[chemin_pointe[0]].split(".")
+        for coupe in range(len(pointe), 0, -1):
+            try:
+                module = importlib.import_module(".".join(pointe[:coupe]))
+            except ImportError:
+                continue
+            objet = _descendre(module, [*pointe[coupe:], *chemin_pointe[1:]])
+            if objet is not None:
+                return objet
+
+    try:
+        module = importlib.import_module(
+            str(chemin.with_suffix("")).replace("/", ".").replace("\\", ".")
+        )
+    except ImportError:  # pragma: no cover -- le fichier vient du depot
+        return None
+    return _descendre(module, chemin_pointe)
 
 
 def test_les_intitules_du_depot_sont_deux_a_deux_DISTINCTS():
@@ -548,6 +647,115 @@ def test_la_parade_des_intitules_ATTRAPE_le_contournement_par_APPEL(tmp_path):
     assert cles[0] == cles[1], (
         f"l'appel rend {cles[0]!r} et le litteral {cles[1]!r} : la parade ne les rapproche "
         f"pas, et redonner le nom du garde-fou par appel la traverserait"
+    )
+
+
+def test_la_parade_des_intitules_ATTRAPE_AUSSI_l_appel_QUALIFIE(tmp_path):
+    """**Reserve 3 de la phase 3, levee avec sa parade et non avec son seul rendu.**
+
+    ETABLIT : un appel qualifie `module.fonction()` et le litteral qu'il produit rendent la
+    MEME cle, donc un doublon entre les deux fait tomber la parade.
+
+    POPULATION : les trois formes du meme nom -- le litteral, l'appel nu, l'appel qualifie --
+    lues dans une source construite pour ce cas.
+
+    Le cas frere juste au-dessus tient l'appel **nu**, celui qu'un `from ... import` produit.
+    Il ne dit rien de l'appel **qualifie**, et c'est celui-la que le depot ecrit :
+    `mesure/phase3_mesure.py:887` est le seul appel a `intitule_du_garde_fou` hors des tests,
+    et il est ecrit `campagne_module.intitule_du_garde_fou()`. **La parade laissait donc passer
+    la seule forme qu'elle avait a garder.**
+
+    C'est la deuxieme fois que cette parade est prise sur une forme syntaxique qu'elle ne
+    voyait pas -- le tour 2 ne lisait que les litteraux. La lecon n'est pas « il fallait penser
+    a celle-la » : c'est qu'une parade syntaxique doit etre eprouvee sur **le style reel du
+    depot**, pas sur la forme que son auteur avait en tete.
+    """
+    import ast
+
+    from agents import campagne as campagne_module
+
+    attendu = campagne_module.intitule_du_garde_fou()
+    source = (
+        "from agents import campagne as campagne_module\n"
+        "from agents.campagne import intitule_du_garde_fou\n"
+        "a = Campagne(intitule=campagne_module.intitule_du_garde_fou())\n"
+        "b = Campagne(intitule=intitule_du_garde_fou())\n"
+        f"c = Campagne(intitule={attendu!r})\n"
+    )
+    # La source est ECRITE sur le disque et c'est ce fichier-la qui est passe a la parade :
+    # les alias se lisent dans les imports du fichier ou l'appel est ecrit, donc la source et
+    # le chemin doivent etre le meme objet -- comme ils le sont lors du balayage du depot.
+    faux = tmp_path / "faux_module_de_mesure.py"
+    faux.write_text(source, encoding="utf-8")
+
+    arbre = ast.parse(source)
+    # Indexe par la VARIABLE affectee : `ast.walk` est un parcours en largeur et ne rend pas
+    # les appels dans l'ordre de la source.
+    cles: dict[str, str | None] = {}
+    for noeud in ast.walk(arbre):
+        if not isinstance(noeud, ast.Assign):
+            continue
+        for motcle in noeud.value.keywords:
+            if motcle.arg == "intitule":
+                cles[noeud.targets[0].id] = _cle_d_un_intitule(motcle.value, faux)
+
+    assert set(cles) == {"a", "b", "c"}, cles
+    assert cles["a"] == attendu, (
+        f"l'appel QUALIFIE rend {cles['a']!r} au lieu de {attendu!r} : redonner le nom du "
+        f"garde-fou sous cette forme traverse la parade -- et c'est la forme que le depot ecrit"
+    )
+    assert cles["a"] == cles["b"] == cles["c"], (
+        f"les trois formes du meme nom ne se rapprochent pas : {cles}"
+    )
+
+
+def test_la_parade_des_intitules_voit_le_SEUL_appel_du_depot_hors_des_tests():
+    """ETABLIT : l'appel a `intitule_du_garde_fou` ecrit dans `mesure/` est resolu, pas transcrit.
+
+    POPULATION : tous les arguments `intitule=` de `mesure/*.py` et `agents/*.py` qui sont des
+    APPELS -- c'est-a-dire, aujourd'hui, `mesure/phase3_mesure.py:887`.
+
+    Le cas precedent travaille sur une source fabriquee ; celui-ci travaille sur le depot. Sans
+    lui, la parade pourrait etre elargie a une forme que le depot n'ecrit pas, et personne ne
+    le verrait. **Il tombe si le depot se met a ecrire un appel que la parade ne resout pas**,
+    ce qui est exactement l'evenement qui a produit la reserve 3.
+    """
+    import ast
+    import pathlib
+
+    appels: list[tuple[str, str | None]] = []
+    for chemin in sorted(
+        list(pathlib.Path("mesure").glob("*.py")) + list(pathlib.Path("agents").glob("*.py"))
+    ):
+        arbre = ast.parse(chemin.read_text(encoding="utf-8"))
+        for noeud in ast.walk(arbre):
+            if not isinstance(noeud, ast.Call):
+                continue
+            for motcle in noeud.keywords:
+                if motcle.arg != "intitule" or not isinstance(motcle.value, ast.Call):
+                    continue
+                appels.append(
+                    (
+                        f"{chemin}:{motcle.value.lineno}",
+                        _cle_d_un_intitule(motcle.value, chemin),
+                        ast.unparse(motcle.value),
+                    )
+                )
+
+    assert appels, (
+        "aucun intitule construit par APPEL dans le depot : ce cas n'inspecte plus rien, et "
+        "la parade des appels qualifies n'est plus eprouvee sur du code reel"
+    )
+    # « Transcrit » se reconnait a l'EGALITE avec le texte source. Un test de forme -- une
+    # parenthese finale, par exemple -- se tromperait ici : l'intitule resolu finit lui-meme
+    # par « (garde-fou) ».
+    non_resolus = [
+        (ou, cle) for ou, cle, source in appels if cle is None or cle == source
+    ]
+    assert not non_resolus, (
+        f"{len(non_resolus)} appel(s) `intitule=` du depot ne sont pas RESOLUS mais transcrits "
+        f"tels quels : {non_resolus}. Un intitule transcrit ne se rapproche d'aucun litteral, "
+        f"donc un doublon avec lui traverse la parade."
     )
 
 

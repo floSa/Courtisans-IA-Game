@@ -26,6 +26,83 @@ def _pt(valeur: float | None) -> str:
     return "-" if valeur is None else f"{valeur * 100:+.2f} pt"
 
 
+#: La lateralite de la borne de Clopper-Pearson, ecrite **une fois** et jamais sous-entendue.
+#:
+#: **Reserve 1 de la phase 3.** Le rapport ecrivait « borne haute a 99 % » quatre fois pour une
+#: borne **unilaterale** prise au risque 1 %. Un lecteur qui recalcule lit « 99 % » comme un
+#: intervalle bilateral, dont la queue vaut 0,5 %, et il trouve **0,2690 %** (0/1967) et
+#: **0,0510 %** (0/10382) la ou le document publie 0,2338 % et 0,0443 %.
+#:
+#: **Aucune conclusion ne change** -- l'agent vaut 35,87 % et 3,66 %, il est au-dela des deux
+#: lectures --, mais un chiffre juste sous une etiquette fausse est exactement la faute que ce
+#: projet passe son temps a chasser : un nombre exact sur une population que sa phrase ne
+#: nomme pas.
+LATERALITE_EXACTE = "unilaterale au risque 1 % (Clopper-Pearson)"
+
+
+def _phrase_de_borne_exacte(comparaison) -> str:
+    """La phrase d'un verdict par bornes exactes -- **les quatre cas, pas un seul.**
+
+    **Reserve 2 de la phase 3.** Cette phrase etait ecrite en dur pour le seul cas que la
+    phase 3 rencontre : « le zero **de la ligne de base** ». Trois des quatre cas en sortaient
+    faux, et aucun n'etait faux *aujourd'hui* -- ils l'auraient ete a la premiere phase qui en
+    produit un :
+
+    - un zero du cote de l'**agent** aurait ete attribue a la ligne de base ;
+    - un taux a **100 %** aurait ete annonce « le zero », avec une « borne haute » quand c'est
+      une borne basse ;
+    - **deux** cotes degeneres auraient fait parler d'un « intervalle de l'autre cote » qui
+      n'existe pas.
+
+    Le rendu ne pouvait pas faire mieux : `Comparaison` ne lui passait qu'un nombre. Le defaut
+    vivait dans le cablage, et c'est la que la parade est posee -- voir `Comparaison.separation`.
+    """
+    separation = getattr(comparaison, "separation", None)
+    borne = _borne(comparaison.borne_exacte)
+    taux_agent = comparaison.agent.taux()
+    taux_base = comparaison.base.taux()
+
+    def _degenere(taux) -> bool:
+        return taux is not None and (taux <= 0.0 or taux >= 1.0)
+
+    if separation is not None and separation.cote == "les deux":
+        if taux_agent == taux_base:
+            return (
+                f"**non separable** -- les deux cotes valent {_pct(taux_agent)} : l'ecart est "
+                f"exactement nul, et c'est une conclusion, pas une absence de conclusion"
+            )
+        return (
+            f"**separable** -- par bornes exactes : les deux cotes sont degeneres a des bouts "
+            f"opposes ({_pct(taux_agent)} contre {_pct(taux_base)}), et leurs bornes exactes "
+            f"{LATERALITE_EXACTE} ne peuvent pas se croiser"
+        )
+
+    if separation is not None:
+        cote = separation.cote
+        taux_du_cote = taux_agent if cote == "agent" else taux_base
+        taux_de_l_autre = taux_base if cote == "agent" else taux_agent
+    else:  # pragma: no cover -- une ligne exacte porte toujours sa separation
+        cote = "ligne de base" if _degenere(taux_base) else "agent"
+        taux_du_cote = taux_base if cote == "ligne de base" else taux_agent
+        taux_de_l_autre = taux_agent if cote == "ligne de base" else taux_base
+
+    zero = taux_du_cote is not None and taux_du_cote <= 0.0
+    cote = "l'agent" if cote == "agent" else "la ligne de base"
+    quoi = "le zero" if zero else "le cent pour cent"
+    sens = "borne haute" if zero else "borne basse"
+    ou = "en deca" if zero else "au-dela"
+    if comparaison.separable:
+        return (
+            f"**separable** -- par bornes exactes : {quoi} de {cote} a pour {sens} exacte "
+            f"{LATERALITE_EXACTE} **{borne}**, et l'autre cote vaut "
+            f"{_pct(taux_de_l_autre)}"
+        )
+    return (
+        f"non separable -- {sens} exacte {LATERALITE_EXACTE} de {quoi} de {cote}, {borne}, "
+        f"croise l'intervalle de l'autre cote, qui reste {ou}"
+    )
+
+
 def _borne(valeur: float | None) -> str:
     """Une borne exacte, a QUATRE decimales. Deux ne suffisent pas ici.
 
@@ -539,8 +616,9 @@ def section_comportements(
             "n'avait calculee, et fausse. Un zero se traite par sa **borne exacte**, celle de "
             "Clopper-Pearson, qui ne suppose aucune normalite : "
             + " ; ".join(
-                f"`{c.base.succes}/{c.base.total}` a pour borne haute a 99 % "
-                f"**{_borne(c.borne_exacte)}** quand l'agent vaut **{_pct(c.agent.taux())}**"
+                f"`{c.base.succes}/{c.base.total}` a pour borne haute exacte "
+                f"{LATERALITE_EXACTE} **{_borne(c.borne_exacte)}** quand l'agent vaut "
+                f"**{_pct(c.agent.taux())}**"
                 for c in exactes
             )
             + ". Le rendu **leve** desormais sur toute ligne qu'aucune regle n'a tranchee, "
@@ -588,14 +666,7 @@ def section_comportements(
         if comparaison.exclu is not None:
             verdict = f"**non compare** : {comparaison.exclu}"
         elif comparaison.regle == phase3_mesure.REGLE_BORNES_EXACTES:
-            borne = _borne(comparaison.borne_exacte)
-            verdict = (
-                f"**separable** -- par bornes exactes : le zero de la ligne de base a pour "
-                f"borne haute a 99 % **{borne}**, et l'agent est au-dela"
-                if comparaison.separable
-                else f"non separable -- la borne exacte du taux degenere, {borne}, croise "
-                f"l'intervalle de l'autre cote"
-            )
+            verdict = _phrase_de_borne_exacte(comparaison)
         elif comparaison.separable:
             verdict = "**separable**"
         elif comparaison.parties_requises is not None:
@@ -673,7 +744,7 @@ def section_lecture_de_b4(
         + "** chez le greedy -- un ecart "
         + (
             "**separable**, et le paragraphe 5 dit par quelle regle : la borne haute exacte "
-            f"a 99 % de ce zero vaut {_borne(contre_nature.borne_exacte)}"
+            f"{LATERALITE_EXACTE} de ce zero vaut {_borne(contre_nature.borne_exacte)}"
             if contre_nature is not None
             and contre_nature.borne_exacte is not None
             and contre_nature.separable

@@ -29,3 +29,9 @@ models/
 # `journal.jsonl` du run est lui aussi ecrit la -- il est recopie dans `mesure/resultats/`
 # quand il devient un livrable.
 models/phase3/
+
+# Donnees d auto-jeu de experiences/ : plusieurs Go, regenerables par experiences.iteration
+experiences/donnees/
+
+# Residus de l ancienne campagne, deplaces de la racine le 27/09/2026 (non suivis, conserves)
+historique_ancien/

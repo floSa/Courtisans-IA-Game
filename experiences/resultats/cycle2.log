@@ -1,0 +1,18 @@
+{'X': (1764000, 293), 'S': (1764000, 6), 'SA': (1764000, 6), 'D': (1764000, 3, 6), 'G': (1764000,), 'M': (1764000,), 'TR': (1764000,), 'P': (1764000,)} gain moyen 0.0
+plafond 6000000: anciens sous-echantillonnes 1 partie sur 2
+/home/florian/mes_projets/jeux/Courtisans-IA-Game/experiences/statuts.py:206: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:820.)
+  print(f"epoque {ep} perte {float(perte):.4f} | test : R2 gain {r2_gain:.4f} "
+epoque 0 perte 1.4973 | test : R2 gain 0.0625 logloss statuts 0.8481 precision 0.6079
+epoque 1 perte 1.4629 | test : R2 gain 0.0868 logloss statuts 0.8470 precision 0.6078
+{"generation": 1, "contre_greedy": {"etiquette": "2 greedys", "gain": 0.27666666666666667, "ic99": [0.22796296296296295, 0.3225925925925926], "parties": 1350, "donnes": [6000000, 6000449]}, "duel_cycle1": {"etiquette": "duel agent du cycle 1", "gain": 0.032962962962962965, "ic99": [-0.013703703703703702, 0.07611111111111112], "parties": 1350, "donnes": [6100000, 6100449]}, "duel_precedent": {"etiquette": "duel modele courant", "gain": 0.032962962962962965, "ic99": [-0.013703703703703702, 0.07611111111111112], "parties": 1350, "donnes": [6100000, 6100449]}, "secondes": {"jeu": 202, "apprentissage": 10, "jugement": 75, "depuis_debut": 287}}
+{'X': (1764000, 293), 'S': (1764000, 6), 'SA': (1764000, 6), 'D': (1764000, 3, 6), 'G': (1764000,), 'M': (1764000,), 'TR': (1764000,), 'P': (1764000,)} gain moyen 0.0
+plafond 6000000: anciens sous-echantillonnes 1 partie sur 2
+epoque 0 perte 1.4774 | test : R2 gain 0.0892 logloss statuts 0.8320 precision 0.6174
+epoque 1 perte 1.4192 | test : R2 gain 0.0933 logloss statuts 0.8301 precision 0.6182
+{"generation": 2, "contre_greedy": {"etiquette": "2 greedys", "gain": 0.2638888888888889, "ic99": [0.21944444444444444, 0.30833333333333335], "parties": 1350, "donnes": [6000000, 6000449]}, "duel_cycle1": {"etiquette": "duel agent du cycle 1", "gain": 0.021111111111111112, "ic99": [-0.0187037037037037, 0.062407407407407404], "parties": 1350, "donnes": [6100000, 6100449]}, "duel_precedent": {"etiquette": "duel modele courant", "gain": 0.015555555555555555, "ic99": [-0.026111111111111113, 0.05685185185185185], "parties": 1350, "donnes": [6100000, 6100449]}, "secondes": {"jeu": 201, "apprentissage": 10, "jugement": 75, "depuis_debut": 574}}
+{'X': (1764000, 293), 'S': (1764000, 6), 'SA': (1764000, 6), 'D': (1764000, 3, 6), 'G': (1764000,), 'M': (1764000,), 'TR': (1764000,), 'P': (1764000,)} gain moyen 0.0
+plafond 6000000: anciens sous-echantillonnes 1 partie sur 3
+epoque 0 perte 1.4157 | test : R2 gain 0.0896 logloss statuts 0.8330 precision 0.6156
+epoque 1 perte 1.3975 | test : R2 gain 0.0933 logloss statuts 0.8310 precision 0.6167
+{"generation": 3, "contre_greedy": {"etiquette": "2 greedys", "gain": 0.3035185185185185, "ic99": [0.25981481481481483, 0.34833333333333333], "parties": 1350, "donnes": [6000000, 6000449]}, "duel_cycle1": {"etiquette": "duel agent du cycle 1", "gain": 0.01074074074074074, "ic99": [-0.029074074074074075, 0.05092592592592593], "parties": 1350, "donnes": [6100000, 6100449]}, "duel_precedent": {"etiquette": "duel modele courant", "gain": 0.028703703703703703, "ic99": [-0.01351851851851852, 0.07111111111111111], "parties": 1350, "donnes": [6100000, 6100449]}, "secondes": {"jeu": 202, "apprentissage": 10, "jugement": 84, "depuis_debut": 869}}

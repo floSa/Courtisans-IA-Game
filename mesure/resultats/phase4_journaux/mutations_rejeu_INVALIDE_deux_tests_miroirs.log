@@ -1,0 +1,64 @@
+passe de BASE, sans mutation : 1237 verts, 0 rouges (cible 'tests')
+
+mutation                                  verts  rouges  verdict
+--------------------------------------------------------------------------------------
+espions-adverses-visibles                  1158      79  detectee
+phase-et-assassin-absents                  1213      24  detectee
+residu-compte-les-morts                    1227      10  detectee
+meurtre-obligatoire                        1171      66  detectee
+fin-joueur-par-joueur                      1156      81  detectee
+noble-vaut-un                              1190      47  detectee
+points-au-poseur                           1205      32  detectee
+morts-comptes-au-decompte                  1212      25  detectee
+main-non-triee                             1219      18  detectee
+doublons-non-masques                       1223      14  detectee
+observation-sans-joueur                    1162      75  detectee
+observateur-absent                         1218      19  detectee
+libelle-de-cible-ambigu                    1220      17  detectee
+libelle-nomme-un-dos                       1225      12  detectee
+bornes-de-joueurs-desynchronisees          1234       3  detectee
+player-obligatoire                         1231       6  detectee
+chaine-de-jeu-sans-config                  1223      14  detectee
+roles-separes-par-virgule                  1222      15  detectee
+tours-arrondis-au-dessus                   1184      53  detectee
+vue-du-joueur-contourne-la-parade          1191      46  detectee
+perception-nomme-les-dos                   1160      77  detectee
+perception-decide-sur-un-noeud-de-chance   1235       2  detectee
+masque-laisse-une-probabilite-aux-illegales   1229       8  detectee
+tirer-ne-verifie-plus-la-somme             1234       3  detectee
+valeur-non-aplatie                         1235       2  detectee
+deterministe-ignore-le-masque              1234       3  detectee
+politique-reseau-observe-le-siege-zero     1235       2  detectee
+charger-laisse-le-reseau-en-entrainement   1234       3  detectee
+gain-du-siege-zero                         1234       3  detectee
+noeuds-du-pool-collectes                   1234       3  detectee
+avantage-sans-ligne-de-base                1235       2  detectee
+alea-de-partie-partage                     1234       3  detectee
+composition-toujours-self-play             1234       3  detectee
+tete-plus-grande-que-l-espace-d-action     1235       2  detectee
+garde-fou-de-portee-un                     1231       6  detectee
+garde-fou-se-contente-d-un-ecart-etabli    1235       2  detectee
+garde-fou-sans-bonferroni                  1235       2  detectee
+pool-garde-les-plus-anciens                1235       2  detectee
+intitule-du-garde-fou-sans-population      1235       2  detectee
+garde-fou-se-compare-a-lui-meme            1232       5  detectee
+progres-etabli-redevient-etabli            1234       3  detectee
+percentiles-apparies-unilateraux           1234       3  detectee
+rho-sur-des-groupes-inegaux                1234       3  detectee
+appariement-par-rang-de-valeur             1231       6  detectee
+masse-binomiale-part-de-zero                  -       -  EXPIRE apres 900 s -- la suite ne rend pas la main
+clopper-pearson-borne-basse-unilaterale    1231       6  detectee
+r2-devient-r0                              1227      10  detectee
+r3-ignore-le-statut-final                  1230       7  detectee
+vue-d-un-siege-voit-tous-les-espions       1231       6  detectee
+part-fractionnee-ne-somme-plus-a-un        1230       7  detectee
+quantile-sans-bonferroni                   1227      10  detectee
+sieges-non-permutes                        1230       7  detectee
+adversaires-partagent-un-alea              1235       2  detectee
+gain-lu-au-siege-zero                      1234       3  detectee
+separation-exacte-toujours-disjointe       1235       2  detectee
+b4-strict-avale-le-departage               1234       3  detectee
+b4-meurtre-couteux-au-mauvais-denominateur   1234       3  detectee
+--------------------------------------------------------------------------------------
+1 mutation(s) ont fait EXPIRER la suite. **Ce n'est ni une detection ni une survie** : la suite n'a rendu aucun verdict, et elle n'a pas de delai de garde propre -- un blocage y est indiscernable d'une lenteur.
+  - masse-binomiale-part-de-zero (mesure/binomiale.py) : la recurrence part de k = 0 : pour n = 10 000 le premier terme vaut 1e-1760, donc zero en flottant, et toute la loi se normalise a partir de rien

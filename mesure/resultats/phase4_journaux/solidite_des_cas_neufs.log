@@ -1,0 +1,25 @@
+valeur-non-aplatie                         1 site(s) nies -> 2 de mes cas tombent
+      test_la_valeur_rendue_porte_une_valeur_par_ligne_et_pas_une_colonne
+      test_la_perte_de_valeur_est_la_moyenne_des_n_erreurs_et_non_des_n_carre
+avantage-sans-ligne-de-base                1 site(s) nies -> 1 de mes cas tombent
+      test_la_valeur_predite_change_la_perte_de_politique_donc_elle_sert_de_ligne_de_base
+tete-plus-grande-que-l-espace-d-action     1 site(s) nies -> 1 de mes cas tombent
+      test_la_tete_de_politique_a_exactement_la_taille_de_l_espace_d_action_du_moteur
+politique-reseau-observe-le-siege-zero     3 site(s) nies -> 3 de mes cas tombent
+      test_la_politique_du_reseau_observe_le_siege_QUI_DECIDE_et_pas_un_siege_fixe
+      test_la_politique_STOCHASTIQUE_observe_elle_aussi_le_siege_qui_decide
+      test_toute_observation_construite_par_ce_module_porte_le_siege_QUI_DECIDE
+adversaires-partagent-un-alea              1 site(s) nies -> 2 de mes cas tombent
+      test_les_deux_adversaires_d_une_partie_ne_partagent_ni_generateur_ni_etat
+      test_aucun_alea_d_adversaire_n_est_reutilise_dans_toute_la_campagne
+perception-decide-sur-un-noeud-de-chance   1 site(s) nies -> 1 de mes cas tombent
+      test_percevoir_leve_sur_un_noeud_de_chance_reel
+garde-fou-se-contente-d-un-ecart-etabli    1 site(s) nies -> 1 de mes cas tombent
+      test_le_site_d_appel_arrete_le_run_sur_un_EFFONDREMENT_etabli
+garde-fou-sans-bonferroni                  2 site(s) nies -> 2 de mes cas tombent
+      test_l_intervalle_du_garde_fou_est_pris_au_risque_divise_par_le_nombre_de_regards
+      test_l_ecart_apparie_du_garde_fou_est_pris_au_meme_risque_corrige
+pool-garde-les-plus-anciens                1 site(s) nies -> 1 de mes cas tombent
+      test_le_pool_plein_jette_le_plus_ANCIEN_checkpoint
+
+=== tous les fichiers restaures ===

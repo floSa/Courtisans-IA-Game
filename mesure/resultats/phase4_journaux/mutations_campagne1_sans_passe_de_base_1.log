@@ -1,0 +1,46 @@
+mutation                          verts  rouges  verdict
+------------------------------------------------------------------------------
+espions-adverses-visibles          1095      77  detectee
+phase-et-assassin-absents          1150      22  detectee
+residu-compte-les-morts            1164       8  detectee
+meurtre-obligatoire                1108      64  detectee
+fin-joueur-par-joueur              1093      79  detectee
+noble-vaut-un                      1127      45  detectee
+points-au-poseur                   1142      30  detectee
+morts-comptes-au-decompte          1149      23  detectee
+main-non-triee                     1156      16  detectee
+doublons-non-masques               1160      12  detectee
+observation-sans-joueur            1099      73  detectee
+observateur-absent                 1155      17  detectee
+libelle-de-cible-ambigu            1157      15  detectee
+libelle-nomme-un-dos               1162      10  detectee
+bornes-de-joueurs-desynchronisees   1171       1  detectee
+player-obligatoire                 1168       4  detectee
+chaine-de-jeu-sans-config          1160      12  detectee
+roles-separes-par-virgule          1159      13  detectee
+tours-arrondis-au-dessus           1121      51  detectee
+vue-du-joueur-contourne-la-parade   1128      44  detectee
+perception-nomme-les-dos           1097      75  detectee
+perception-decide-sur-un-noeud-de-chance   1172       0  SURVIT -- trou de test
+masque-laisse-une-probabilite-aux-illegales   1166       6  detectee
+tirer-ne-verifie-plus-la-somme     1171       1  detectee
+valeur-non-aplatie                 1172       0  SURVIT -- trou de test
+deterministe-ignore-le-masque      1171       1  detectee
+politique-reseau-observe-le-siege-zero   1172       0  SURVIT -- trou de test
+charger-laisse-le-reseau-en-entrainement   1171       1  detectee
+gain-du-siege-zero                 1171       1  detectee
+noeuds-du-pool-collectes           1171       1  detectee
+avantage-sans-ligne-de-base        1172       0  SURVIT -- trou de test
+alea-de-partie-partage             1171       1  detectee
+composition-toujours-self-play     1171       1  detectee
+tete-plus-grande-que-l-espace-d-action   1172       0  SURVIT -- trou de test
+garde-fou-de-portee-un             1168       4  detectee
+garde-fou-se-contente-d-un-ecart-etabli   1172       0  SURVIT -- trou de test
+garde-fou-sans-bonferroni          1172       0  SURVIT -- trou de test
+pool-garde-les-plus-anciens        1172       0  SURVIT -- trou de test
+intitule-du-garde-fou-sans-population   1172       0  SURVIT -- trou de test
+garde-fou-se-compare-a-lui-meme    1169       3  detectee
+progres-etabli-redevient-etabli    1171       1  detectee
+percentiles-apparies-unilateraux   1171       1  detectee
+rho-sur-des-groupes-inegaux        1171       1  detectee
+appariement-par-rang-de-valeur     1168       4  detectee

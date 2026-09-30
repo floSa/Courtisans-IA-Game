@@ -1,0 +1,19 @@
+{
+ "agent": "experiences.fin_de_partie:fin_de_partie:chemin='experiences/modeles/meilleur.pt',tours_fin=1,nb_mondes=16,rollout='valeur'",
+ "adv": "experiences.pimc:greedy_rollout",
+ "donnes": 200,
+ "parties": 600,
+ "gain_moyen": 0.31333333333333335,
+ "ic99": [
+  0.24791666666666667,
+  0.3829166666666666
+ ],
+ "victoire_seule": 0.5116666666666667,
+ "ecart_score_moyen": 0.7516666666666667,
+ "par_siege": {
+  "0": 0.05375,
+  "1": 0.4,
+  "2": 0.48625
+ },
+ "secondes": 393.7129011154175
+}
