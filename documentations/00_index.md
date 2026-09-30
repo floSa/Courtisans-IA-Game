@@ -2,7 +2,18 @@
 
 **Point d'entrée du projet. Où on en est, ce qui est vrai, ce qu'on fait ensuite, et dans quel document c'est écrit.**
 
-Mis à jour le 21/08/2026.
+Mis à jour le 30/09/2026 (bandeau ci-dessous) ; le reste du document décrit l'état du 21/08/2026.
+
+> **État au 30/09/2026.** Une seule branche, `main` ; les anciennes sont archivées en tags
+> `archive/*` (voir [09_reprise.md](09_reprise.md) §0). L'IA se construit dans `experiences/`
+> : **[../experiences/README.md](../experiences/README.md)** est le point d'entrée côté IA,
+> avec l'état, les commandes et la lecture des chiffres. Acquis : une cible auxiliaire
+> « statut final des familles » qui fait passer l'agent de +0,171 à +0,297 contre 2 greedys
+> (3 graines), un agent à égalité avec `meilleur.pt` en duel, et +0,099 de plus avec le calcul
+> de fin de partie. Le journal du 30/09 en tête de [06](06_journal_decisions.md) détaille
+> les cycles 1 à 4 ; les sources consultées sont dans [10_sources.md](10_sources.md).
+> Les sections 1 à 5 ci-dessous sont l'état d'**août** (phases 0 à 3) et gardent leur valeur
+> historique : elles ne disent plus « ce qu'on fait maintenant ».
 
 > **Tu reprends le projet sur une autre machine ou un autre compte ?** Lis
 > **[09_reprise.md](09_reprise.md)** avant ce document. Il contient ce qui n'est écrit nulle
@@ -68,10 +79,13 @@ flowchart TD
 | **[06_journal_decisions.md](06_journal_decisions.md)** | Qu'a-t-on testé, trouvé, décidé, et quand ? | Vivant |
 | **[07_protocole_audit_croise.md](07_protocole_audit_croise.md)** | Comment un agent en audite un autre : contrôles A1-A7, verdicts | Établi |
 | **[08_modele_compte_rendu.md](08_modele_compte_rendu.md)** | Le format imposé de tout compte rendu d'agent | Établi |
-| `rapport_expert.md` | Historique complet, brique par brique (2 695 lignes) | Archive — **sur la branche `cfr-pivot`**, arrive avec le fast-forward |
+| [09_reprise.md](09_reprise.md) | Par où reprendre, état des branches et des tags, règles de travail | **À jour au 30/09** (§0) |
+| [10_sources.md](10_sources.md) | Veille bibliographique : ce qui a été lu, niveau de lecture | Vivant |
+| [../experiences/README.md](../experiences/README.md) | L'IA : carte du dossier, reproduction, lecture des chiffres | **À jour au 30/09** |
+| `rapport_expert.md` | Historique complet, brique par brique (2 695 lignes) | Archive — dans le tag `archive/cfr-pivot` (`git show archive/cfr-pivot:rapport_expert.md`) |
 
 
-> **Le dépôt est sur `main`, qui est figé au 26 mai.** Tout le travail CFR — `cfr/`,
+> **(Historique, 15/08 — voir le bandeau du 30/09 pour l'état actuel.) Le dépôt est sur `main`, qui est figé au 26 mai.** Tout le travail CFR — `cfr/`,
 > `rapport_expert.md`, `etat_des_lieux_et_roadmap.md` — est sur `origin/cfr-pivot`, qui
 > contient l'intégralité de `main` plus 16 commits. Aucune divergence : le fast-forward est
 > trivial. Il est bloqué par un `.git/index.lock` vide daté du 15/08 19h30 (point ouvert n° 5).

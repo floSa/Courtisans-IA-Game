@@ -200,7 +200,8 @@ def entrainer(chemins, sortie, epoques=6, lot=4096, lr=1e-3, statuts=True, poids
                 ps.append(b)
             pv, ps = torch.cat(pv), torch.cat(ps)
             yt = Y[coupe:]
-            r2_gain = 1 - float(((pv[:, 0] - yt[:, 0]) ** 2).sum() / ((yt[:, 0] - yt[:, 0].mean()) ** 2).sum())
+            ecart_q = ((pv[:, 0] - yt[:, 0]) ** 2).sum()
+            r2_gain = 1 - float(ecart_q / ((yt[:, 0] - yt[:, 0].mean()) ** 2).sum())
             ll = float(ce(ps.reshape(-1, 3), S[coupe:].reshape(-1)))
             acc = float((ps.argmax(-1) == S[coupe:]).float().mean())
         print(f"epoque {ep} perte {float(perte):.4f} | test : R2 gain {r2_gain:.4f} "
@@ -259,7 +260,8 @@ def evaluer(chemin, donnees, temoin=None, coupe_depuis=None):
     print(tout)
     M = t["M"]
     est = ecart_espere(P, t["D"])
-    ligne = f"R2 de l'ecart final : via statuts {r2(M, est):.4f} | tete ecart {r2(M, pv[:, 1] * 5):.4f}"
+    ligne = (f"R2 de l'ecart final : via statuts {r2(M, est):.4f} "
+             f"| tete ecart {r2(M, pv[:, 1] * 5):.4f}")
     ligne += f" | statut actuel (= greedy) {r2(M, ecart_espere(np.eye(3)[SA], t['D'])):.4f}"
     print(ligne)
     print(f"R2 du gain (tete gain) {r2(t['G'], pv[:, 0]):.4f}")
@@ -291,7 +293,7 @@ def _net(chemin):
 
 
 def agent_statuts(rng, chemin, poids_valeur=0.0, poids_statuts=1.0, poids_ecart=0.05,
-                  mondes_ciblage=8):
+                  mondes_ciblage=8, aveugle=True):
     """Note chaque action par l'ecart espere de la vue d'apres-coup, via les statuts finaux.
 
     `poids_valeur` : part de la tete de gain ajoutee au score (0 = les statuts seuls) ;
@@ -308,7 +310,7 @@ def agent_statuts(rng, chemin, poids_valeur=0.0, poids_statuts=1.0, poids_ecart=
         if len(legales) == 1:
             return legales[0]
         mondes = ([determiniser(etat, moi, rng) for _ in range(mondes_ciblage)]
-                  if etat.phase() is Phase.CIBLAGE else [etat])
+                  if aveugle and etat.phase() is Phase.CIBLAGE else [etat])
         vues, doms = [], []
         for monde in mondes:
             for a in legales:

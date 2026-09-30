@@ -10,6 +10,51 @@ Si tu reprends le pilotage : lis ce document, puis
 
 ---
 
+## 0. État au 30/09/2026 — à lire avant tout le reste de ce document
+
+**Il n'y a plus qu'une branche : `main`.** Le 30/09/2026, `reprise-iteration-experte` a été
+fusionnée dans `main` (1 312 tests verts après fusion), et toutes les anciennes branches ont été
+**archivées sous forme de tags** puis supprimées. Rien n'est perdu : chaque tag pointe vers le
+dernier commit de sa branche.
+
+| Tag (`git show archive/<nom>`) | Ce que c'était |
+|---|---|
+| `archive/main-24-08` | `main` avant la fusion (phase pilote, 24/08) |
+| `archive/phase-4-tete-de-valeur` | phase 4, tête de valeur (27 commits, dernier le 26/09) ; hypothèse réfutée avant entraînement, voir le journal du 24/08 |
+| `archive/audit-phase-3`, `archive/audit-phase-3-tour-2`, `archive/audit-phase-3-tour-3` | les trois tours d'audit croisé de la phase 3 |
+| `archive/phase-3-premier-agent` | le premier agent entraîné (PPO), déjà dans l'historique de `main` |
+| `archive/cfr-pivot` | l'ancien travail CFR (53 commits) : source du plafond à 0,190 et de l'oracle combo cités par le journal |
+| `archive/old_version` | l'ancien projet RL (38 commits, AlphaZero/MCTS) |
+
+Pour relire une ancienne branche : `git checkout archive/cfr-pivot` (sans créer de branche), ou
+`git log archive/cfr-pivot`.
+
+**Le projet a changé de nature depuis le 27/09.** Les phases 0 à 4 (moteur conforme, protocole
+pilote/audit croisé) ont produit le moteur et les mesures de référence ; l'IA se construit
+désormais dans `experiences/`, en régime exploratoire (essais courts, seuils écrits avant la
+mesure, une entrée de journal par cycle). **Point d'entrée : [../experiences/README.md](../experiences/README.md).**
+Les sections 1 à 8 ci-dessous décrivent le protocole pilote d'août (conversations de
+construction et d'audit) : elles restent vraies pour le **moteur** et pour tout ce qu'on
+voudrait affirmer de façon confirmatoire, mais ne sont plus le mode de travail courant.
+
+**Ordre de lecture pour reprendre aujourd'hui :**
+1. [../experiences/README.md](../experiences/README.md) : état, carte du dossier, commandes, comment lire un chiffre ;
+2. les entrées du 30/09 en tête de [06_journal_decisions.md](06_journal_decisions.md) (cycles 1 à 4 et contrôle des graines) ;
+3. [../experiences/PISTES.md](../experiences/PISTES.md) : ce qu'on teste ensuite ;
+4. [10_sources.md](10_sources.md) : la veille bibliographique ;
+5. seulement ensuite, le reste de ce document et [00_index.md](00_index.md).
+
+**Règles de travail en vigueur** (données par l'auteur, à respecter) : français ; critique franche ;
+carte blanche sur les essais ; commits réguliers **sans mention de Claude comme co-auteur** ;
+synthèse courte à chaque résultat marquant ; dépôt toujours propre et documenté (« que
+n'importe qui, IA ou humain, puisse reprendre »). Toute opération difficile à défaire
+(pousser sur `main`, supprimer des branches distantes) se confirme d'abord.
+
+**Ce qui attend l'accord de l'auteur :** le port du moteur en Rust (`rustup`, second langage dans
+le dépôt) ; il débloquerait la fin de partie dans l'entraînement et la recherche profonde.
+
+---
+
 ## 1. Comment travailler avec l'humain
 
 **C'est le point le plus important de ce document, et il n'est écrit dans aucun autre fichier.**
@@ -141,7 +186,7 @@ Le pilote **n'écrit pas le code des phases**. Il :
 | **4** | Mesure de la phase 2, constructeur | **terminée** |
 | **5** | Audit de la phase 2 | **clos — ACCEPTÉ au tour 3** |
 
-## 4. État du dépôt, vérifié le 19/08/2026
+## 4. État du dépôt, vérifié le 19/08/2026 (HISTORIQUE — voir le §0 pour l'état actuel)
 
 `github.com/floSa/Courtisans_Game`. **Tout est poussé.**
 

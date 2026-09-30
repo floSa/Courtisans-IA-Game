@@ -60,7 +60,8 @@ def main():
         contextes = [(0.35, [A, A, A]), (0.25, [A, GREEDY, GREEDY]),
                      (0.20, [A, MEILLEUR, MEILLEUR]), (0.20, [A, P, P])]
         donnees = f"{DOSSIER}/gen_{k:02d}.npz"
-        generer_contextes(contextes, a.parties, a.depart_generation + 100_000 * k, 0.05, 11, donnees)
+        depart = a.depart_generation + 100_000 * k
+        generer_contextes(contextes, a.parties, depart, 0.05, 11, donnees)
         fichiers.append(donnees)
         t2 = time.time()
         modele = f"{MODELES}/cycle2_gen_{k:02d}.pt"
@@ -73,7 +74,8 @@ def main():
             "duel_cycle1": juger(cand, agent(ref), 450, 6_100_000, "duel agent du cycle 1"),
             "duel_precedent": juger(cand, agent(courant), 450, 6_100_000, "duel modele courant"),
             "secondes": {"jeu": round(t2 - t1), "apprentissage": round(t3 - t2),
-                         "jugement": round(time.time() - t3), "depuis_debut": round(time.time() - t0)},
+                         "jugement": round(time.time() - t3),
+                         "depuis_debut": round(time.time() - t0)},
         }
         print(json.dumps(ligne), flush=True)
         with open("experiences/resultats/cycle2.jsonl", "a") as f:

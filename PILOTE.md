@@ -5,21 +5,25 @@
 Corpus de référence, pour toi et pour les agents :
 [documentations/00_index.md](documentations/00_index.md).
 
-Mis à jour le 20/08/2026, après la clôture de la phase 2 et le bouchage des trous du protocole.
+Mis à jour le 30/09/2026. Le reste du document (actions 1 à 5, phase 3-4) est l'état d'août, conservé comme historique.
 
 ---
 
-## Où on en est — 27/09/2026, reprise
+## Où on en est — 30/09/2026
 
 | | |
 |---|---|
-| Ce qui a changé | **Pivot d'algorithme.** Le PPO à tête d'indices est abandonné : son ciblage d'Assassin était aveugle (64 % des nœuds) et il perd contre le greedy (−0,185). Une **valeur d'après-coup** (on joue chaque coup sur un clone et on note la vue qui en résulte) bat le greedy **sur le jeu complet à 90 cartes**, +0,169 IC 99 % [+0,112 ; +0,227]. Entrée de journal du 27/09 |
-| Meilleure IA | `experiences/modeles/meilleur.pt` : jeu complet, +0,289 IC 99 % [+0,236 ; +0,341] contre 2 greedys, **48,8 % de victoires seules** (greedy à sa place : 28,5 %). En tête du tournoi à 8 (§5.1 de la revue) |
-| Travail en cours | Boucle d'auto-jeu TD(λ) contre une ligue, **jeu complet**, `experiences/iteration.py`. Suivi : `uv run python -m experiences.suivi experiences/resultats/iteration7.jsonl` |
-| Documents à lire | [experiences/REVUE_CRITIQUE.md](experiences/REVUE_CRITIQUE.md) (critique, résultats, commandes), puis l'entrée du 27/09 de [06_journal_decisions.md](documentations/06_journal_decisions.md) |
-| Branche | `reprise-iteration-experte` |
-| Méthode | Deux régimes : **exploratoire** dans `experiences/` (arène figée, essais en minutes), **confirmatoire** (pré-inscription + audit croisé) pour ce qu'on veut affirmer |
-| Prochaine marche | Voir [experiences/PISTES.md](experiences/PISTES.md) : d'abord le « greedy probabiliste » (apprendre le statut final des familles), puis les réglages du signal ; le moteur Rust attend ton accord |
+| Dépôt | **Une seule branche, `main`**, tout y est fusionné et poussé (1 312 tests verts). Les anciennes branches sont des tags `archive/*` : voir [documentations/09_reprise.md](documentations/09_reprise.md) §0 |
+| Ce qui a changé | Depuis le 27/09 l'IA se construit dans `experiences/` en **cycles** : hypothèse, seuils écrits avant la mesure, test, entrée de journal. Quatre cycles faits le 30/09 |
+| Acquis | Une **cible auxiliaire dense** (le statut final des 6 familles) fait passer l'agent de +0,171 à +0,297 contre 2 greedys (3 graines ; ≈ 9 écarts-types). Avec 108 000 parties : **+0,455** contre 2 greedys, à égalité avec `meilleur.pt` en duel. Avec le calcul de fin de partie : +0,099 de plus contre le réseau seul, +0,046 [+0,001 ; +0,093] contre `meilleur.pt` (*non établi*) |
+| Ce qui a échoué | L'auto-jeu en ligue avec la tête de statuts (cycle 2) ne progresse pas |
+| Travail en cours | Rien de lancé. Prochains tests (tous dans [PISTES.md](experiences/PISTES.md)) : ensemble des 3 graines et réglage du poids d'écart (gratuits), augmentation par permutation des familles, cibles auxiliaires supplémentaires dont l'identité des Espions |
+| Documents à lire | [experiences/README.md](experiences/README.md) (état, commandes, lecture des chiffres), puis les entrées du 30/09 de [06_journal_decisions.md](documentations/06_journal_decisions.md), puis [documentations/10_sources.md](documentations/10_sources.md) |
+| Méthode | Deux régimes : **exploratoire** dans `experiences/`, **confirmatoire** (pré-inscription + audit croisé) pour ce qu'on veut affirmer. Tout écart < 0,05 est « non établi » sans 3 graines |
+| Décision qui t'attend | **Le moteur Rust** : installation de `rustup`, second langage dans le dépôt. Il débloque la fin de partie dans l'entraînement et la recherche profonde, seule piste qui puisse dépasser franchement `meilleur.pt` |
+
+Le tableau du 27/09 (branche `reprise-iteration-experte`, boucle TD(λ) en cours) est remplacé par
+celui-ci ; son contenu est dans le journal du 27/09.
 
 L'état ci-dessous est celui du 24/08. Il est conservé tel quel, comme document historique.
 

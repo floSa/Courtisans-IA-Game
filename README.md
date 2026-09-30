@@ -68,22 +68,35 @@ restaure les fichiers par `git checkout`.
 
 ## Les agents qui jouent — `experiences/`
 
-Depuis le 27/09/2026, l'IA se construit dans `experiences/`, en régime exploratoire. Le
-moteur et la suite ci-dessus en restent la référence. Point d'entrée :
-[experiences/REVUE_CRITIQUE.md](experiences/REVUE_CRITIQUE.md).
+**Une seule branche : `main`.** Depuis le 27/09/2026, l'IA se construit dans `experiences/`, en
+régime exploratoire ; le moteur et la suite ci-dessus en restent la référence. **Point
+d'entrée : [experiences/README.md](experiences/README.md)** (état, carte du dossier,
+commandes pour tout reproduire, comment lire un chiffre). Le journal des décisions est
+[documentations/06_journal_decisions.md](documentations/06_journal_decisions.md), les sources
+[documentations/10_sources.md](documentations/10_sources.md), les pistes
+[experiences/PISTES.md](experiences/PISTES.md).
+
+État au 30/09/2026 : la meilleure IA (réseau à tête de statuts + calcul de fin de partie) bat
+2 greedys de **+0,47** de gain moyen (intervalle à 99 % : +0,42 à +0,52) et est à égalité ou
+à peine au-dessus de la meilleure IA précédente (`meilleur.pt`) en duel.
 
 `uv sync` installe aussi le groupe `ia` (torch, numpy). Mesurer un agent sur le jeu complet,
 contre deux greedys, sièges permutés :
 
 ```bash
-COURTISANS_INSTANCE=complete uv run python -m experiences.arene "experiences.valeur:agent_valeur:chemin='experiences/modeles/c1b.pt'" --donnes 300
+COURTISANS_INSTANCE=complete uv run python -m experiences.arene "experiences.statuts:agent_statuts:chemin='experiences/modeles/statuts_s3_e2.pt',poids_statuts=1,poids_valeur=10" --donnes 300
 ```
 
-Les garde-fous de ces agents (aveuglement, tenseur rapide identique à l'officiel) :
+Les garde-fous de ces agents (aveuglement, tenseur rapide identique à l'officiel, données bien
+formées) :
 
 ```bash
 uv run pytest tests/experiences -q
 ```
+
+L'historique des anciennes branches (travail CFR, ancien projet RL, audits de la phase 3,
+phase 4) est conservé dans les tags `archive/*` : `git tag -l 'archive/*'`, détail dans
+[documentations/09_reprise.md](documentations/09_reprise.md) §0.
 
 ---
 

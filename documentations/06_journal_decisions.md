@@ -62,6 +62,34 @@ triplant les données), donc plus de parties de greedy, bon marché à générer
 
 ---
 
+## [2026-09-30] Ménage du dépôt — une seule branche, rien de perdu
+
+**Décision de l'auteur :** « je veux un `main` avec tout documenté, pas de branche à la fin ».
+
+**Fait.**
+1. Worktree `Courtisans_pilote` supprimé (instantané de `main` du 24/08, lien `.git` cassé depuis
+   le renommage du dépôt ; état propre, contenu déjà dans `main`).
+2. Sauvegarde complète des fichiers non suivis (checkpoints des itérations 1 à 8, journaux,
+   réseaux du contrôle des graines) : commit `0c180e3`.
+3. **8 tags d'archive** posés et poussés avant toute suppression : `archive/main-24-08`,
+   `archive/phase-4-tete-de-valeur`, `archive/audit-phase-3` (+ `-tour-2`, `-tour-3`),
+   `archive/phase-3-premier-agent`, `archive/cfr-pivot`, `archive/old_version`.
+4. `reprise-iteration-experte` fusionnée dans `main` (fusion sans conflit ; les prompts 21 et 22,
+   qui n'existaient que sur `main`, sont conservés). 1 308 tests verts après la fusion, 1 312 avec
+   les 4 tests ajoutés pour `statuts.py` (aveuglement au ciblage avec témoin, statuts certains =
+   décompte du tenseur, données bien formées, parties légales).
+5. Documentation remise à jour : `experiences/README.md` (nouveau : état, carte, commandes,
+   plages de donnes, lecture des chiffres, pièges), `documentations/10_sources.md` (nouveau :
+   veille bibliographique, niveau de lecture de chaque source), `09_reprise.md` §0,
+   bandeau de `00_index.md`, `PILOTE.md`, `README.md`.
+6. Branches locales et distantes supprimées après la fusion et le push de `main`.
+
+**Ce qui reste hors Git, volontairement** : `experiences/donnees/` (~14 Go, régénérable :
+commandes dans `experiences/README.md` §3), et les dossiers ignorés de l'ancienne campagne
+(`cfr/`, `models/`, `historique_ancien/`), conservés sur disque.
+
+---
+
 ## [2026-09-30] Contrôle de robustesse — la variation d'un entraînement à l'autre
 
 *Question de l'auteur : les runs sont-ils assez longs pour que les résultats soient significatifs ?
