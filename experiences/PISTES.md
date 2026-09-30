@@ -173,3 +173,59 @@ la recherche, on recommence. C'est la boucle d'AlphaZero, adaptée aux cartes ca
 2. **Réglages du signal (§7)** et **juge plus fin (§8)** : quelques heures, en tâche de fond.
 3. **Moteur rapide (§4)**, si tu donnes ton accord. Il débloque ensuite **§2, §5 et §6**,
    c'est-à-dire la fin de partie apprise, l'inférence des Espions et la recherche profonde.
+
+---
+
+# Nouvelles pistes — 30/09/2026, après les cycles 1 à 4 et le contrôle des graines
+
+Point de départ mesuré : la tête de statuts (cible auxiliaire dense) est l'acquis solide
+(+0,126 contre 2 greedys, ≈ 9 écarts-types entre graines). L'agent plafonne à l'égalité avec
+`meilleur.pt` en duel ; la fin de partie donne +0,099 sur le réseau seul. Le réseau
+surapprend dès la 2ᵉ-3ᵉ époque sur 108 000 parties : **le goulot est le nombre de parties
+distinctes, pas le nombre de vues** (147 vues très corrélées par partie). Bruit d'entraînement :
+± 0,015 (1 écart-type).
+
+Littérature consultée (résumés seulement, pas les ablations détaillées) : Suphx (prédiction de
+récompense globale, *oracle guiding* : entraîner un agent qui voit l'information cachée, puis
+retirer progressivement ces entrées) ; PerfectDou (distillation d'information parfaite) ;
+Skat (un réseau prédit la position des cartes cachées pour échantillonner des mondes vraisemblables
+dans PIMC) ; EPIMC (repousser la résolution en information parfaite pour limiter la
+*strategy fusion*) ; Gumbel AlphaZero (amélioration de politique avec peu de simulations).
+
+## A. Gratuit (minutes, modèles déjà entraînés)
+
+1. **Ensemble des 3 graines** (`avec_1..3.pt`, moyenne des sorties) : réduit la variance
+   d'entraînement ; attendu +0,02 à +0,04.
+2. **Balayage de `poids_ecart`** (fixé à 0,05 pour V, jamais réglé sur le réseau à statuts).
+
+## B. Apprentissage (heures)
+
+3. **Augmentation par permutation des familles** (`iteration.permuter_familles`, règle C18),
+   **absente de `statuts.py`** alors que c'est le levier direct contre le manque de parties
+   distinctes : jusqu'à 720 variantes par vue, sans générer une partie. À permuter aussi :
+   étiquettes de statut et domaines.
+4. **Plus de cibles auxiliaires denses** : scores finaux des trois joueurs, contenu final des
+   domaines par famille (la pièce manquante du calcul « greedy probabiliste » : H1b a échoué
+   parce que la formule ignorait les cartes à venir), nombre d'Espions restants.
+5. **Tête de croyance sur les Espions cachés** (identité des dos adverses) : cible auxiliaire
+   *et* moyen de la piste 7.
+6. **Oracle guiding / enseignant privilégié** (Suphx, PerfectDou) : un réseau qui voit mains et
+   dos, puis distillé dans le réseau qui ne voit pas. Plus lourd ; à tenter après 3-5.
+7. **Réseau équivariant par famille** (poids partagés entre les 6 familles) : moins de données
+   nécessaires. Plus lourd.
+
+## C. Recherche
+
+8. **Mondes pondérés par la croyance** dans `fin_de_partie` au lieu d'uniformes (Skat, PISTES §5) :
+   touche directement l'incertitude restante au dernier tour.
+9. **Recherche courte rejouée avec la nouvelle valeur** : « rien de mesurable » datait d'une
+   valeur plus bruitée (R² 0,05-0,09 contre 0,116 maintenant).
+10. **Fin de partie à 2 tours avec résolution repoussée** (EPIMC) si la piste 9 marche.
+11. **Moteur rapide (Rust)** : débloque l'expert iteration et la fin de partie dans
+    l'entraînement (PISTES §2, §6). Accord de l'auteur requis.
+
+## D. Mesure
+
+12. **Test séquentiel (SPRT)** dans l'arène : arrêter tôt quand l'écart est net, continuer quand
+    il est serré. Règle : tout écart < 0,05 est « non établi » sans 3 graines.
+13. **Parties contre l'auteur**, journalisées : le vrai juge (l'interface existe).
