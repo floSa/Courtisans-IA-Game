@@ -76,15 +76,16 @@ commandes pour tout reproduire, comment lire un chiffre). Le journal des décisi
 [documentations/10_sources.md](documentations/10_sources.md), les pistes
 [experiences/PISTES.md](experiences/PISTES.md).
 
-État au 30/09/2026 : la meilleure IA (réseau à tête de statuts + calcul de fin de partie) bat
-2 greedys de **+0,47** de gain moyen (intervalle à 99 % : +0,42 à +0,52) et est à égalité ou
-à peine au-dessus de la meilleure IA précédente (`meilleur.pt`) en duel.
+État au 30/09/2026 (soir) : la meilleure IA (réseau à cible auxiliaire « statut final des familles »,
+entraîné avec permutation des familles) bat 2 greedys de **+0,50 à +0,56** de gain moyen et
+**bat la meilleure IA précédente (`meilleur.pt`) en duel de +0,05 à +0,09**, sur 5 graines.
+Reprise : [experiences/README.md](experiences/README.md), section « Où l'on reprend ».
 
 `uv sync` installe aussi le groupe `ia` (torch, numpy). Mesurer un agent sur le jeu complet,
 contre deux greedys, sièges permutés :
 
 ```bash
-COURTISANS_INSTANCE=complete uv run python -m experiences.arene "experiences.statuts:agent_statuts:chemin='experiences/modeles/statuts_s3_e2.pt',poids_statuts=1,poids_valeur=10" --donnes 300
+COURTISANS_INSTANCE=complete uv run python -m experiences.arene "experiences.statuts:agent_statuts:chemin='experiences/modeles/graines/aug108_1.pt',poids_statuts=1,poids_valeur=10" --donnes 300
 ```
 
 Les garde-fous de ces agents (aveuglement, tenseur rapide identique à l'officiel, données bien

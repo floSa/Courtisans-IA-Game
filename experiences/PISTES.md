@@ -192,6 +192,12 @@ Skat (un réseau prédit la position des cartes cachées pour échantillonner de
 dans PIMC) ; EPIMC (repousser la résolution en information parfaite pour limiter la
 *strategy fusion*) ; Gumbel AlphaZero (amélioration de politique avec peu de simulations).
 
+> **Avancement au 30/09 au soir.** Fait : piste 1 (ensemble : +0,025, non tranché), piste 2
+> (`poids_ecart` : sans effet), piste 3 (**augmentation : la grande victoire, +0,137 à données égales,
+> bat `meilleur.pt` en duel**). Reste : 4 à 13. Le duel contre `meilleur.pt` plafonne à ≈ +0,06-0,07
+> même avec 3× plus de données ; les prochains gains sont à chercher dans 4-5 (cibles auxiliaires,
+> croyance sur les Espions), 8 (mondes pondérés) et 9 (recherche).
+
 ## A. Gratuit (minutes, modèles déjà entraînés)
 
 1. **Ensemble des 3 graines** (`avec_1..3.pt`, moyenne des sorties) : réduit la variance

@@ -8,9 +8,8 @@ Mis à jour le 30/09/2026 (bandeau ci-dessous) ; le reste du document décrit l'
 > `archive/*` (voir [09_reprise.md](09_reprise.md) §0). L'IA se construit dans `experiences/`
 > : **[../experiences/README.md](../experiences/README.md)** est le point d'entrée côté IA,
 > avec l'état, les commandes et la lecture des chiffres. Acquis : une cible auxiliaire
-> « statut final des familles » qui fait passer l'agent de +0,171 à +0,297 contre 2 greedys
-> (3 graines), un agent à égalité avec `meilleur.pt` en duel, et +0,099 de plus avec le calcul
-> de fin de partie. Le journal du 30/09 en tête de [06](06_journal_decisions.md) détaille
+> « statut final des familles » **plus l'augmentation par permutation des familles** : un réseau
+> qui bat `meilleur.pt` en duel (+0,05 à +0,09, 5 graines) et 2 greedys de +0,50 à +0,56. Le journal du 30/09 en tête de [06](06_journal_decisions.md) détaille
 > les cycles 1 à 4 ; les sources consultées sont dans [10_sources.md](10_sources.md).
 > Les sections 1 à 5 ci-dessous sont l'état d'**août** (phases 0 à 3) et gardent leur valeur
 > historique : elles ne disent plus « ce qu'on fait maintenant ».

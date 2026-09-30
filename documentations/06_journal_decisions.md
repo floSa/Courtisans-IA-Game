@@ -76,7 +76,49 @@ données ne sont plus le facteur limitant une fois augmentées).
 augmenté : hybride contre le réseau seul ≥ +0,05 (comme +0,099 au cycle 4), contre 2 greedys et
 contre `meilleur.pt` sur donnes neuves (6 700 000+, 450 donnes).
 
-**Résultat.** *(à venir)*
+**Résultat 7a.** 2 graines, 108 000 parties de greedy avec augmentation, 6 époques
+(`graines/aug108_1.pt`, `aug108_2.pt`). `experiences/resultats/cycle7_*`.
+
+| | R² du gain (test) | Duel contre 2 × `meilleur.pt` (6 200 000+) | Contre 2 greedys (6 400 000+) |
+|---|---:|---:|---:|
+| cycle 6 : 36 000 parties, augmentées (3 graines) | 0,121 | +0,070 (+0,060 / +0,093 / +0,058) | +0,496 |
+| **cycle 7a : 108 000 parties, augmentées (2 graines)** | **0,139** | **+0,059** (+0,068 [+0,021 ; +0,114] / +0,050 [+0,005 ; +0,094]) | **+0,556** (+0,566 / +0,546) |
+
+**H7a : INFIRMÉE** au sens du seuil écrit (moyenne du duel < +0,07). Le réseau est meilleur
+(R² 0,139 > 0,121 ; +0,06 contre les greedys), mais **le duel contre `meilleur.pt` ne bouge pas** :
+il plafonne autour de **+0,06 à +0,07**, avec 36 000 comme avec 108 000 parties. Même
+non-transitivité qu'au cycle 3 : des données en plus font mieux battre le greedy, pas
+`meilleur.pt`. Les deux mesures sont à suivre à chaque cycle.
+
+**Résultat 7b, INTERROMPU (l'auteur a éteint la machine).** Réseau de référence `aug108_1`.
+Mesuré, donnes neuves 6 700 000+, 450 donnes :
+
+| Mesure | Gain | IC 99 % |
+|---|---:|---|
+| réseau seul contre 2 × `meilleur.pt` | +0,056 | [+0,010 ; +0,105] |
+| **hybride (fin de partie) contre 2 × réseau seul** | **+0,064** | [+0,028 ; +0,099] |
+
+Le seuil de H7b (hybride contre réseau seul ≥ +0,05) est atteint par l'estimation (+0,064), borne
+basse > 0 : **confirmé sur ce point, à une seule mesure** (le gain de la fin de partie est
+plus faible qu'au cycle 4, +0,099, sans doute parce que le réseau est meilleur).
+**Non mesurés** : hybride contre `meilleur.pt` et hybride contre 2 greedys (à relancer, voir la
+commande ci-dessous). Aucun résultat partiel n'a été écrit pour eux.
+
+```bash
+# à relancer (chacun ≈ 25 min à priorité minimale sur 6 cœurs)
+M=experiences/modeles/graines/aug108_1.pt
+H="experiences.fin_de_partie:fin_de_partie:chemin='$M',statuts=True,tours_fin=1,nb_mondes=32,rollout='valeur'"
+B="experiences.valeur:agent_valeur:chemin='experiences/modeles/meilleur.pt'"
+COURTISANS_INSTANCE=complete nice -n 19 uv run python -m experiences.arene "$H" --adv "$B" --donnes 450 --depart 6700000 --sortie experiences/resultats/cycle7b_arene.jsonl
+COURTISANS_INSTANCE=complete nice -n 19 uv run python -m experiences.arene "$H" --donnes 300 --depart 6700000 --sortie experiences/resultats/cycle7b_arene.jsonl
+```
+
+**Décision.** L'acquis du jour est solide : **augmentation par permutation des familles +
+cible auxiliaire des statuts** donnent un réseau qui bat `meilleur.pt` en duel (≈ +0,06 à
++0,07, 5 graines au total sur les cycles 6 et 7a, toutes à borne basse > 0). Plus de données ne
+déplace plus le duel ; il faut autre chose (cibles auxiliaires supplémentaires, croyance sur les
+Espions, recherche) : voir PISTES.md, section B et C.
+
 
 ---
 

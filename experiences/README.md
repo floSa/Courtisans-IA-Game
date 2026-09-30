@@ -13,16 +13,23 @@ diagnostic du 27/09 et les résultats antérieurs). Sources de la veille :
 
 ---
 
-## 1. Où on en est (30/09/2026)
+## 1. Où on en est (30/09/2026, au soir)
 
 | | |
 |---|---|
-| Acquis solide | Une **cible auxiliaire dense** — le statut final des 6 familles — apprise en plus du gain. À données égales, elle fait passer l'agent de +0,171 à +0,297 contre 2 greedys (3 graines, écart-type entre graines 0,014 : l'effet fait ≈ 9 écarts-types) |
-| Meilleur réseau | `modeles/statuts_s3_e2.pt` (108 000 parties de greedy, 2 époques) : **+0,455** contre 2 greedys ; **à égalité avec `modeles/meilleur.pt` en duel** (−0,009) |
-| Agent jouable de référence | `fin_de_partie` sur ce réseau : +0,099 contre le réseau seul ; +0,470 contre 2 greedys ; **+0,046 [+0,001 ; +0,093] contre `meilleur.pt`** (limite : *non établi*, voir §5) |
-| Ce qui a échoué | Auto-jeu en ligue avec la tête de statuts (cycle 2) : aucun progrès en 3 générations |
-| Goulot identifié | Le **nombre de parties distinctes** (147 vues très corrélées par partie) : le réseau surapprend dès 2-3 époques |
-| Prochaines marches | [PISTES.md](PISTES.md), section « Nouvelles pistes du 30/09 » |
+| **Acquis principal** | **Cible auxiliaire « statut final des 6 familles » + augmentation par permutation des familles** (`entrainer --augmenter`). Le réseau seul bat `meilleur.pt` en duel : **+0,060 à +0,093** sur 3 graines (36 000 parties), **+0,050 à +0,068** sur 2 graines (108 000 parties), toutes à borne basse > 0 |
+| Gain contre 2 greedys | +0,496 (36 000 parties augmentées, 3 graines, écart-type 0,008) ; **+0,556** (108 000 parties, 2 graines). Sans augmentation : +0,359 |
+| **Agent de référence** | `modeles/graines/aug108_1.pt` (R² du gain 0,139), option `poids_statuts=1, poids_valeur=10`. Avec la fin de partie (`fin_de_partie`, `statuts=True`) : +0,064 [+0,028 ; +0,099] de plus contre le réseau seul (une mesure) |
+| Plafond actuel | Le duel contre `meilleur.pt` reste à ≈ +0,06-0,07 quelle que soit la quantité de données : des données en plus font mieux battre le greedy, pas `meilleur.pt` |
+| Ce qui a échoué ou reste non tranché | Auto-jeu en ligue (cycle 2) ; ensemble de réseaux (+0,025, non tranché) ; `poids_ecart` (sans effet) |
+
+### Où l'on reprend (dans l'ordre)
+
+1. **Relancer les 2 mesures interrompues du cycle 7b** (hybride contre `meilleur.pt`, hybride contre 2 greedys) : commandes à la fin de l'entrée du journal « Cycle 7 ». ≈ 50 min au total, en arrière-plan.
+2. **Cibles auxiliaires supplémentaires** ([PISTES.md](PISTES.md) pistes 4-5) : scores finaux des trois joueurs, contenu final des domaines, **identité des Espions cachés**. C'est la suite naturelle : la cible dense + l'augmentation sont ce qui a marché. Il faut ajouter ces étiquettes à `_lot` de `statuts.py` (régénérer les données, 6 min pour 12 000 parties) et des têtes au `Reseau`.
+3. **Mondes pondérés par la croyance** dans `fin_de_partie` (piste 8), qui s'appuie sur l'identité des Espions prédite.
+4. **Plusieurs graines pour tout écart < 0,05**, et mesurer toujours *contre les greedys ET contre `meilleur.pt`* (non-transitivité).
+5. Décision attendue de l'auteur : le moteur Rust ([PISTES.md](PISTES.md) piste 11).
 
 Un agent = une fonction `f(rng, **options) → politique`, et une politique = `f(état) → action`.
 Il se désigne par une chaîne `module:fonction:clé=valeur,clé=valeur` (voir `arene.fabrique`).
@@ -68,9 +75,11 @@ export COURTISANS_INSTANCE=complete
 uv run python -m experiences.statuts generer --parties 12000 --sortie experiences/donnees/statuts/greedy_12k.npz
 uv run python -m experiences.statuts generer --parties 24000 --depart 9012000 --sortie experiences/donnees/statuts/greedy_24k.npz
 
-# Entraînement : 2 époques (le test est affiché à chaque époque ; au-delà, surapprentissage)
-uv run python -m experiences.statuts entrainer experiences/modeles/statuts_s2.pt \
-    experiences/donnees/statuts/greedy_12k.npz experiences/donnees/statuts/greedy_24k.npz --epoques 2
+# Entraînement : le test est affiché à chaque époque.
+#   SANS --augmenter : 2 époques (au-delà, surapprentissage).
+#   AVEC --augmenter (permutation des familles, recommandé) : 6 époques, le test monte jusqu'au bout.
+uv run python -m experiences.statuts entrainer experiences/modeles/graines/aug_1.pt \
+    experiences/donnees/statuts/greedy_12k.npz experiences/donnees/statuts/greedy_24k.npz --epoques 6 --augmenter
 #   --sans-statuts  → le réseau témoin (mêmes données, sans tête de statuts)
 
 # Prévisibilité du statut final par tour restant, contre « le statut actuel restera »
@@ -121,9 +130,11 @@ sur un clone et on note la vue qui en résulte). Retenu : statuts ×1, valeur ×
 | `iteration*/gen_NN.pt` | Toutes les générations des itérations 1 à 8 (TD(λ), ligue) |
 | `statuts_s1.pt`, `statuts_temoin.pt` | Premier essai du cycle 1 : 12 000 parties, **6 époques → surapprentissage**. Conservés comme contre-exemple. Ne pas utiliser |
 | `statuts_s2.pt`, `statuts_temoin2.pt` | Cycle 1 : 36 000 parties, 2 époques, avec / sans tête de statuts |
-| `statuts_s3_e1.pt`, `statuts_s3_e2.pt` | Cycle 3 : 108 000 parties, 1 et 2 époques. **`statuts_s3_e2` = référence** |
+| `statuts_s3_e1.pt`, `statuts_s3_e2.pt` | Cycle 3 : 108 000 parties, 1 et 2 époques, **sans augmentation** (à égalité avec `meilleur.pt` en duel) |
 | `cycle2_gen_01..03.pt` | Cycle 2 (auto-jeu en ligue) : n'ont pas progressé |
-| `graines/avec_N.pt`, `graines/sans_N.pt` | Contrôle des graines : 3 réseaux avec, 3 sans tête de statuts (36 000 parties, 2 époques) |
+| `graines/avec_N.pt`, `graines/sans_N.pt` | Contrôle des graines : 3 réseaux avec, 3 sans tête de statuts (36 000 parties, 2 époques, sans augmentation) |
+| `graines/aug_N.pt` | **Cycle 6** : 3 réseaux avec statuts **et augmentation** (36 000 parties, 6 époques) |
+| `graines/aug108_N.pt` | **Cycle 7a** : 2 réseaux avec statuts et augmentation (108 000 parties, 6 époques). **`aug108_1` = référence** |
 
 `resultats/` : `arene.jsonl` (mesures d'exploration), `cycle1_*` (prévisibilité + confirmation),
 `cycle2*.jsonl`, `cycle3_arene.jsonl`, `cycle4_arene.jsonl` (hybride), `graines.jsonl`
