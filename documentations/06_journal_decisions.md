@@ -62,6 +62,51 @@ triplant les données), donc plus de parties de greedy, bon marché à générer
 
 ---
 
+## [2026-09-30] Contrôle de robustesse — la variation d'un entraînement à l'autre
+
+*Question de l'auteur : les runs sont-ils assez longs pour que les résultats soient significatifs ?
+Constat préalable : tous les IC 99 % affichés mesurent le hasard des **parties** ; aucun ne
+mesurait celui de l'**entraînement** (un seul réseau par variante, aucune graine répétée).*
+
+**Hypothèse.** L'effet de la tête de statuts (cycle 1 : +0,178 → +0,288) dépasse la variation
+d'un entraînement à l'autre. Infirmée si l'écart entre variantes est du même ordre que l'écart-type
+entre graines.
+
+**Instrument.** 3 graines × {avec tête de statuts, sans}, 36 000 parties, 2 époques, chaque réseau
+joué contre 2 greedys sur 450 donnes neuves (6 400 000+).
+
+| Variante | Graine 1 | Graine 2 | Graine 3 | Moyenne | Écart-type entre graines |
+|---|---:|---:|---:|---:|---:|
+| sans statuts, valeur seule | +0,180 | +0,176 | +0,156 | +0,171 | 0,013 |
+| avec statuts, valeur seule | +0,312 | +0,296 | +0,284 | +0,297 | 0,014 |
+| avec statuts, statuts ×1 + valeur ×10 | +0,365 | +0,371 | +0,342 | +0,359 | 0,015 |
+
+**Résultat : confirmé.** L'écart avec / sans statuts (+0,126) fait environ 9 écarts-types entre
+graines ; aucune des trois graines « sans » n'atteint la plus basse des « avec ». Le mélange
+(+0,359) tient aussi sur trois graines. **La découverte du cycle 1 est réelle, et non un tirage
+favorable.**
+
+**Ce que cela fixe pour lire tous les cycles.** L'incertitude de l'entraînement est d'environ
+**±0,015** (1 écart-type, donc ≈ ±0,03 à 2 écarts-types) contre 2 greedys. Elle s'ajoute à celle
+des parties (IC 99 % de ±0,04 à 450 donnes). Conséquences : (a) les différences de 0,02-0,04
+entre deux réseaux entraînés une fois (cycle 3 contre cycle 1 en duel : +0,037 ; cycle 4
+contre `meilleur.pt` : +0,046) **ne sont pas établies** ; (b) les écarts de 0,1 et plus (aide de
+la tête de statuts, fin de partie contre le réseau seul : +0,099, mesure sur un même réseau donc
+sans variation d'entraînement) **le sont**.
+
+**Limites connues du protocole.** Un seul jeu de données par taille ; réglages de pondération
+choisis sur des donnes d'exploration, puis confirmés sur des donnes neuves mais **les plages
+6 000 000-6 300 000 ont resservi d'un cycle à l'autre** ; la variation d'entraînement n'est
+mesurée que pour le cycle 1 (36 000 parties), pas pour les cycles 3 et 4 ; les adversaires
+(greedy, `meilleur.pt`) ne sont pas un humain.
+
+**Décision.** Protocole conservé, avec trois règles à partir de maintenant : (1) tout écart
+annoncé en dessous de 0,05 est étiqueté « non établi » tant qu'il n'est pas répliqué sur au
+moins 3 graines ; (2) la conclusion « bat `meilleur.pt` » attend ce contrôle sur le cycle 4 ;
+(3) donnes de confirmation neuves à chaque conclusion.
+
+---
+
 ## [2026-09-30] Cycle 4 — Le calcul de fin de partie sur le réseau à statuts
 
 *Exploratoire, seuils écrits avant mesure. Le plateau du cycle 3 (égalité avec `meilleur.pt`
