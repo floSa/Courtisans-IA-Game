@@ -66,13 +66,16 @@ def vue_domaines(etat, joueur):
 
 
 def _lot(args):
-    spec, debut, n, eps = args
+    """`contextes` : [(poids, [spec par siege])] -- un contexte tire par partie, sieges melanges."""
+    contextes, debut, n, eps = args
     e = Engine(C)
     cle = ("X", "S", "SA", "D", "G", "M", "TR", "P")
     out = {k: [] for k in cle}
     for d in range(debut, debut + n):
         rng = random.Random(d)
-        pols = [fabrique(spec)(random.Random(10 * d + j)) for j in range(J)]
+        specs = list(rng.choices([c[1] for c in contextes], [c[0] for c in contextes])[0])
+        rng.shuffle(specs)
+        pols = [fabrique(specs[j])(random.Random(10 * d + j)) for j in range(J)]
         s = e.reset(d)
         vues = []
         while True:
@@ -105,17 +108,21 @@ def _lot(args):
     }
 
 
-def generer(a):
-    taille = 250
-    taches = [(a.spec, a.depart + i, min(taille, a.parties - i), a.eps)
-              for i in range(0, a.parties, taille)]
+def generer_contextes(contextes, parties, depart, eps, workers, sortie):
+    taille = 100
+    taches = [(contextes, depart + i, min(taille, parties - i), eps)
+              for i in range(0, parties, taille)]
     morceaux = []
-    with ProcessPoolExecutor(a.workers) as ex:
+    with ProcessPoolExecutor(workers) as ex:
         for r in ex.map(_lot, taches):
             morceaux.append(r)
     data = {k: np.concatenate([m[k] for m in morceaux]) for k in morceaux[0]}
     print({k: v.shape for k, v in data.items()}, "gain moyen", data["G"].mean(), flush=True)
-    np.savez(a.sortie, **data)
+    np.savez(sortie, **data)
+
+
+def generer(a):
+    generer_contextes([(1, [a.spec] * J)], a.parties, a.depart, a.eps, a.workers, a.sortie)
 
 
 class Reseau(nn.Module):
@@ -136,9 +143,19 @@ class Reseau(nn.Module):
         return p[:, :2], p[:, 2:].reshape(-1, F, 3)
 
 
-def _charger_donnees(chemins):
-    parts = [np.load(c) for c in chemins]
-    return {k: np.concatenate([p[k] for p in parts]) for k in parts[0].files}
+def _charger_donnees(chemins, plafond=None):
+    """Concatene les fichiers. Au-dela de `plafond` vues, le DERNIER fichier est garde entier et
+    les autres sont sous-echantillonnes PAR PARTIE (une partie sur m), a parts egales."""
+    parts = [dict(np.load(c)) for c in chemins]
+    if plafond and sum(len(p["X"]) for p in parts) > plafond:
+        reste = plafond - len(parts[-1]["X"])
+        anciens = sum(len(p["X"]) for p in parts[:-1])
+        m = max(1, int(np.ceil(anciens / max(reste, 1))))
+        for i, p in enumerate(parts[:-1]):
+            garde = (p["P"] % m) == 0
+            parts[i] = {k: v[garde] for k, v in p.items()}
+        print(f"plafond {plafond}: anciens sous-echantillonnes 1 partie sur {m}", flush=True)
+    return {k: np.concatenate([p[k] for p in parts]) for k in parts[0]}
 
 
 def _coupe(d, part=0.92):
@@ -149,8 +166,9 @@ def _coupe(d, part=0.92):
     return i
 
 
-def entrainer(chemins, sortie, epoques=6, lot=4096, lr=1e-3, statuts=True, poids_statuts=1.0):
-    d = _charger_donnees(chemins)
+def entrainer(chemins, sortie, epoques=6, lot=4096, lr=1e-3, statuts=True, poids_statuts=1.0,
+              plafond=None):
+    d = _charger_donnees(chemins, plafond)
     n, coupe = len(d["X"]), _coupe(d)
     dev = torch.device("cuda")
     Xt = torch.tensor(d["X"], dtype=torch.float16, device=dev)

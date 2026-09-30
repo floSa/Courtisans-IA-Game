@@ -16,6 +16,72 @@ Impact plan : phases invalidées ou modifiées
 
 ---
 
+## [2026-09-30] Cycle 2 — Auto-jeu avec la tête de statuts : l'agent progresse-t-il sur ses propres parties ?
+
+*Exploratoire, seuils écrits avant mesure. Suite du cycle 1 : l'agent à statuts égale
+`meilleur.pt` en duel (−0,009 [−0,050 ; +0,036]) en n'ayant vu que des parties de greedy.*
+
+**Hypothèse H2.** Réentraîner le réseau à statuts (depuis zéro, 2 époques) sur les données
+d'une **ligue** jouée par l'agent lui-même (auto-jeu 35 %, contre greedy 25 %, contre
+`meilleur.pt` 20 %, contre la génération précédente 20 %), ajoutées aux parties de greedy,
+produit un agent qui **bat l'agent du cycle 1 en duel**, et que la progression se poursuit sur
+3 générations.
+
+**Instrument.** `experiences/cycle.py`. 12 000 parties par génération (ε = 0,05), plafond
+6 M de vues (les plus anciennes sous-échantillonnées par partie). Jugement, donnes fixes :
+contre 2 greedys (450 donnes, 6 000 000+) et en duel contre l'agent du cycle 1 (450 donnes,
+6 100 000+). Final : duel contre `meilleur.pt` sur donnes neuves (6 200 000+, 600 donnes).
+
+**Seuils.**
+
+| | Confirmée si | Infirmée si |
+|---|---|---|
+| H2 | après 3 générations, duel contre l'agent du cycle 1 > 0 avec borne basse IC 99 % > 0, et ≥ +0,40 contre 2 greedys | duel ≤ 0 (borne haute ≤ 0 : régression) ou aucun progrès sur les 3 générations (gains dans le bruit, ±0,05) |
+
+**Résultat.** 3 générations de 12 000 parties de ligue (≈ 5 min par génération, `experiences/resultats/cycle2.jsonl`).
+Donnes de jugement fixes ; 1 350 parties par ligne.
+
+| Génération | Contre 2 greedys | Duel contre l'agent du cycle 1 |
+|---|---|---|
+| (cycle 1, rappel) | +0,377 [+0,330 ; +0,425] | — |
+| 1 | +0,277 [+0,228 ; +0,323] | +0,033 [−0,014 ; +0,076] |
+| 2 | +0,264 [+0,219 ; +0,308] | +0,021 [−0,019 ; +0,062] |
+| 3 | +0,304 [+0,260 ; +0,348] | +0,011 [−0,029 ; +0,051] |
+
+**Décision : H2 INFIRMÉE.** Aucun duel n'a sa borne basse au-dessus de 0, aucune génération
+n'atteint +0,40 contre les greedys, et le gain contre les greedys est même **plus bas** que celui
+du cycle 1 (plafond de 6 M vues : les parties de greedy sont sous-échantillonnées, et les
+données de ligue ne compensent pas). Le réentraînement depuis zéro sur des parties de l'agent
+ne fait pas progresser, en 3 générations.
+
+**Ce que ça dit.** Le goulot n'est pas « d'où viennent les parties » (mêmes limites que la
+boucle TD : plateau de la valeur autour de R² ≈ 0,09), et nous n'avons pas testé de variante à
+gardien ni à TD(λ) ici : la conclusion vaut pour *cette* boucle simple. Hypothèse suivante,
+la plus économique : le signal étiqueté manque (le cycle 1 passait de R² 0,079 à 0,091 en
+triplant les données), donc plus de parties de greedy, bon marché à générer.
+
+---
+
+## [2026-09-30] Cycle 3 — Plus de données étiquetées : trois fois plus de parties de greedy
+
+*Exploratoire, seuils écrits avant mesure.*
+
+**Hypothèse H3.** Le réseau à statuts entraîné sur **108 000** parties de greedy (36 000 existantes
++ 72 000 nouvelles, donnes 9 500 000+), au lieu de 36 000, donne un agent meilleur : le
+R² du gain sur le test monte au-dessus de 0,10 et l'agent bat l'agent du cycle 1 en duel.
+
+**Instrument.** Même réseau, mêmes pondérations (statuts ×1, valeur ×10). Époques : 2 puis 3,
+avec suivi du test. Jugement : duel contre l'agent du cycle 1 (600 donnes, 6 100 000+) et
+contre 2 greedys (600 donnes, 6 000 000+).
+
+| | Confirmée si | Infirmée si |
+|---|---|---|
+| H3 | duel ≥ +0,04 avec borne basse IC 99 % > 0, et R² du gain test ≥ 0,10 | duel ≤ +0,02 : les données ne sont plus le facteur limitant |
+
+**Résultat.** *(à venir)*
+
+---
+
 ## [2026-09-30] Cycle 1 — Le greedy probabiliste : prédire le statut final des familles
 
 *Régime exploratoire (`experiences/`), seuils écrits avant toute mesure. Origine : piste n° 1 de
