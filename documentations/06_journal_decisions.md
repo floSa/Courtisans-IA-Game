@@ -62,6 +62,30 @@ triplant les données), donc plus de parties de greedy, bon marché à générer
 
 ---
 
+## [2026-09-30] Cycle 4 — Le calcul de fin de partie sur le réseau à statuts
+
+*Exploratoire, seuils écrits avant mesure. Le plateau du cycle 3 (égalité avec `meilleur.pt`
+en duel, quels que soient la source et le nombre de parties) suggère qu'il faut de la
+recherche, pas de la donnée. La fin de partie donnait +0,088 [+0,034 ; …] sur `meilleur.pt`.*
+
+**Hypothèse H4.** L'agent hybride (`experiences/fin_de_partie.py`, désormais avec
+`statuts=True`) : réseau `statuts_s3_e2` (statuts ×1 + valeur ×10) tant qu'il reste plus d'un
+tour, puis simulation jusqu'au bout de chaque coup dans 32 mondes tirés à l'aveugle,
+adversaires simulés par le même réseau (`rollout='valeur'`). Il **bat le réseau seul** en duel
+d'au moins +0,05, et **bat `meilleur.pt`**.
+
+**Instrument.** Arène habituelle, donnes neuves : duel hybride contre 2 × `statuts_s3_e2`
+(450 donnes, 6 300 000+) ; duel contre 2 × `meilleur.pt` (450 donnes, 6 200 000+, à comparer au
+−0,009 du réseau seul sur les mêmes donnes) ; contre 2 greedys (300 donnes, 6 000 000+).
+
+| | Confirmée si | Infirmée si |
+|---|---|---|
+| H4 | duel contre le réseau seul ≥ +0,05, borne basse IC 99 % > 0 ; et duel contre `meilleur.pt` avec borne basse > 0 | duel contre le réseau seul ≤ +0,02 |
+
+**Résultat.** *(à venir)*
+
+---
+
 ## [2026-09-30] Cycle 3 — Plus de données étiquetées : trois fois plus de parties de greedy
 
 *Exploratoire, seuils écrits avant mesure.*

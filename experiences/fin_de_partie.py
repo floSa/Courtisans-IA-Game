@@ -27,12 +27,23 @@ from experiences.valeur import agent_valeur
 
 
 def fin_de_partie(rng: random.Random, chemin: str, tours_fin: int = 1, nb_mondes: int = 16,
-                  rollout: str = "greedy"):
-    appris = agent_valeur(rng, chemin)
+                  rollout: str = "greedy", statuts: bool = False):
+    """`statuts=True` : le reseau est un `experiences.statuts.Reseau` (agent a tete de statuts,
+    statuts x1 + valeur x10) au lieu d'un `valeur.V`."""
+    if statuts:
+        from experiences.statuts import agent_statuts
+
+        def jouer(r, mondes_ciblage=8):
+            return agent_statuts(r, chemin, poids_statuts=1, poids_valeur=10,
+                                 mondes_ciblage=mondes_ciblage)
+    else:
+        def jouer(r, mondes_ciblage=8):
+            return agent_valeur(r, chemin, mondes_ciblage=mondes_ciblage)
+    appris = jouer(rng)
 
     def simule(r: random.Random):
         if rollout == "valeur":
-            return agent_valeur(r, chemin, mondes_ciblage=2)
+            return jouer(r, mondes_ciblage=2)
         return lambda s: greedy.choisir(percevoir(s, s.current_player()), r)
 
     def pol(etat: State) -> int:
