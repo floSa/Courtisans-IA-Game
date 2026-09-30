@@ -72,7 +72,7 @@ import torch
 
 from courtisans.cards import Carte, CartePosee
 from courtisans.engine import Engine, State
-from experiences.arene import _une_donne, bootstrap
+from experiences.arene import WORKERS_DEFAUT, _une_donne, basse_priorite, bootstrap
 from experiences.config import CONFIG
 from experiences.pimc import greedy_rollout
 from experiences.rapide import appliquer, tenseur_rapide
@@ -377,7 +377,7 @@ def main():
                     help="lambda des retours TD ; 1 = Monte-Carlo (v1 a v3)")
     ap.add_argument("--part-greedy", type=float, default=0.3)
     ap.add_argument("--part-self", type=float, default=0.4)
-    ap.add_argument("--workers", type=int, default=11)
+    ap.add_argument("--workers", type=int, default=WORKERS_DEFAUT)
     ap.add_argument("--donnes-greedy", type=int, default=300)
     ap.add_argument("--donnes-ligue", type=int, default=150)
     a = ap.parse_args()
@@ -393,7 +393,7 @@ def main():
     torch.save(torch.load(a.depart, map_location="cpu"), courant)
     acceptees = [*a.passes_initiales, courant]
     fichiers: list[Path] = [Path(f) for f in a.donnees_initiales]
-    with ProcessPoolExecutor(a.workers) as ex:
+    with ProcessPoolExecutor(a.workers, initializer=basse_priorite) as ex:
         greedy_courant = juger(ex, courant, "greedy", 5_000_000, a.donnes_greedy)
         meilleur_greedy = max(greedy_courant["gain"], a.meilleur_greedy or -1.0)
         with open(journal, "a") as f:

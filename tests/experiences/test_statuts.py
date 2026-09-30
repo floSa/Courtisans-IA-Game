@@ -109,3 +109,35 @@ def test_agent_statuts_joue_une_partie_legale(modele):
         a = pols[etat.current_player()](etat)
         assert a in etat.legal_actions()
         etat.apply(a)
+
+
+def test_permutation_des_familles_sur_tenseurs_egale_celle_de_l_etat():
+    """L'augmentation agit sur des tenseurs deja calcules : elle doit egaler le tenseur de
+    l'etat dont on a renomme les familles (`iteration.permuter_familles`), tous sieges."""
+    from experiences.iteration import permuter_familles
+    from experiences.rapide import tenseur_rapide
+    from experiences.statuts import indices_permutation
+
+    verifies = 0
+    for i, etat in enumerate(_etats(6, 9_930_000)):
+        source = torch.tensor(np.random.default_rng(i).permutation(F))[None]
+        perm = [0] * F                      # perm[f] = nouveau nom de la famille f
+        for g in range(F):
+            perm[int(source[0, g])] = g
+        permute = permuter_familles(etat, perm)
+        for j in range(J):
+            x = torch.tensor(tenseur_rapide(etat, j), dtype=torch.float32)[None]
+            attendu = torch.tensor(tenseur_rapide(permute, j), dtype=torch.float32)[None]
+            assert torch.equal(x.gather(1, indices_permutation(source)), attendu)
+            verifies += 1
+    assert verifies > 100
+
+
+def test_permutation_des_familles_identite_et_temoin():
+    from experiences.statuts import indices_permutation
+
+    ident = torch.arange(F)[None]
+    x = torch.randn(1, len(tenseur(Engine(ENTRAINEMENT_3J).reset(0), 0)))
+    assert torch.equal(x.gather(1, indices_permutation(ident)), x)
+    autre = torch.roll(torch.arange(F), 1)[None]
+    assert not torch.equal(x.gather(1, indices_permutation(autre)), x), "temoin mort"

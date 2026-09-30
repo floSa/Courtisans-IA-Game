@@ -31,7 +31,7 @@ from torch import nn
 from courtisans import rules
 from courtisans.cards import ROLES_CACHES, VALEURS, GenreZone, Position
 from courtisans.engine import Engine, Phase
-from experiences.arene import fabrique
+from experiences.arene import WORKERS_DEFAUT, basse_priorite, fabrique
 from experiences.config import CONFIG as C
 from experiences.pimc import determiniser
 from experiences.rapide import appliquer
@@ -113,7 +113,7 @@ def generer_contextes(contextes, parties, depart, eps, workers, sortie):
     taches = [(contextes, depart + i, min(taille, parties - i), eps)
               for i in range(0, parties, taille)]
     morceaux = []
-    with ProcessPoolExecutor(workers) as ex:
+    with ProcessPoolExecutor(workers, initializer=basse_priorite) as ex:
         for r in ex.map(_lot, taches):
             morceaux.append(r)
     data = {k: np.concatenate([m[k] for m in morceaux]) for k in morceaux[0]}
@@ -143,6 +143,42 @@ class Reseau(nn.Module):
         return p[:, :2], p[:, 2:].reshape(-1, F, 3)
 
 
+def _blocs_famille(config=C):
+    """(decalage, taille interne) des 8 blocs du tenseur indexes par famille, famille en tete.
+
+    Disposition de `rapide.tenseur_rapide` : main, bv, bp, dv, dp, residu, morts, marges. Les
+    autres blocs (dos, tours, pioche, phase, scores...) ne portent aucune famille.
+    """
+    from courtisans import infoset
+    f, j, r = config.familles, config.joueurs, len(config.roles)
+    rv, p = len(infoset._roles_visibles(config)), 2
+    internes = [r, rv * p, p, rv * j, j, r, r, 4]
+    blocs, decalage = [], 0
+    for interne in internes:
+        blocs.append((decalage, interne))
+        decalage += f * interne
+    return blocs
+
+
+_BLOCS = _blocs_famille()
+
+
+def indices_permutation(source):
+    """Indices de colonnes pour permuter les familles d'un lot de tenseurs.
+
+    `source` : (n, F), `source[b, g]` = la famille d'origine qui devient la famille `g`.
+    `X_perm = X.gather(1, indices_permutation(source))` est le tenseur de l'etat ou la famille
+    `source[b, g]` s'appelle `g` (verifie contre `iteration.permuter_familles` dans les tests).
+    """
+    n = source.shape[0]
+    idx = torch.arange(ENTREE, device=source.device).repeat(n, 1)
+    for decalage, interne in _BLOCS:
+        k = torch.arange(interne, device=source.device)
+        col = (source[:, :, None] * interne + k[None, None, :] + decalage).reshape(n, -1)
+        idx[:, decalage:decalage + F * interne] = col
+    return idx
+
+
 def _charger_donnees(chemins, plafond=None):
     """Concatene les fichiers. Au-dela de `plafond` vues, le DERNIER fichier est garde entier et
     les autres sont sous-echantillonnes PAR PARTIE (une partie sur m), a parts egales."""
@@ -167,7 +203,7 @@ def _coupe(d, part=0.92):
 
 
 def entrainer(chemins, sortie, epoques=6, lot=4096, lr=1e-3, statuts=True, poids_statuts=1.0,
-              plafond=None):
+              plafond=None, augmenter=False):
     d = _charger_donnees(chemins, plafond)
     n, coupe = len(d["X"]), _coupe(d)
     dev = torch.device("cuda")
@@ -183,10 +219,15 @@ def entrainer(chemins, sortie, epoques=6, lot=4096, lr=1e-3, statuts=True, poids
         net.train()
         for i in range(0, coupe - lot + 1, lot):
             idx = perm[i:i + lot]
-            v, s = Reseau.separer(net(Xt[idx].float()))
+            xb, sb = Xt[idx].float(), S[idx]
+            if augmenter:  # une permutation aleatoire des familles PAR echantillon (regle C18)
+                source = torch.rand(len(idx), F, device=dev).argsort(1)
+                xb = xb.gather(1, indices_permutation(source))
+                sb = sb.gather(1, source)
+            v, s = Reseau.separer(net(xb))
             perte = ((v - Y[idx]) ** 2).mean()
             if statuts:
-                perte = perte + poids_statuts * ce(s.reshape(-1, 3), S[idx].reshape(-1))
+                perte = perte + poids_statuts * ce(s.reshape(-1, 3), sb.reshape(-1))
             opt.zero_grad()
             perte.backward()
             opt.step()
@@ -282,11 +323,27 @@ def evaluer(chemin, donnees, temoin=None, coupe_depuis=None):
 _CACHE = {}
 
 
+class Ensemble(nn.Module):
+    """Moyenne des sorties (gain, ecart, logits de statut) de plusieurs reseaux."""
+
+    def __init__(self, reseaux):
+        super().__init__()
+        self.reseaux = nn.ModuleList(reseaux)
+
+    def forward(self, x):
+        return torch.stack([r(x) for r in self.reseaux]).mean(0)
+
+
 def _net(chemin):
+    """`chemin` : un checkpoint, ou plusieurs separes par `+` (ensemble, sorties moyennees)."""
     if chemin not in _CACHE:
         torch.set_num_threads(1)
-        net = Reseau()
-        net.load_state_dict(torch.load(chemin, map_location="cpu"))
+        reseaux = []
+        for c in chemin.split("+"):
+            net = Reseau()
+            net.load_state_dict(torch.load(c, map_location="cpu"))
+            reseaux.append(net)
+        net = reseaux[0] if len(reseaux) == 1 else Ensemble(reseaux)
         net.eval()
         _CACHE[chemin] = net
     return _CACHE[chemin]
@@ -338,13 +395,15 @@ def main():
     g.add_argument("--parties", type=int, default=12000)
     g.add_argument("--depart", type=int, default=9_000_000)
     g.add_argument("--eps", type=float, default=0.1)
-    g.add_argument("--workers", type=int, default=11)
+    g.add_argument("--workers", type=int, default=WORKERS_DEFAUT)
     g.add_argument("--sortie", required=True)
     t = sp.add_parser("entrainer")
     t.add_argument("sortie")
     t.add_argument("donnees", nargs="+")
     t.add_argument("--epoques", type=int, default=6)
     t.add_argument("--sans-statuts", action="store_true")
+    t.add_argument("--augmenter", action="store_true",
+                   help="permutation aleatoire des familles a chaque lot (regle C18)")
     e = sp.add_parser("evaluer")
     e.add_argument("modele")
     e.add_argument("donnees")
@@ -354,7 +413,8 @@ def main():
     if a.cmd == "generer":
         generer(a)
     elif a.cmd == "entrainer":
-        entrainer(a.donnees, a.sortie, a.epoques, statuts=not a.sans_statuts)
+        entrainer(a.donnees, a.sortie, a.epoques, statuts=not a.sans_statuts,
+                  augmenter=a.augmenter)
     else:
         evaluer(a.modele, a.donnees, a.temoin, coupe_depuis=0 if a.tout else None)
 

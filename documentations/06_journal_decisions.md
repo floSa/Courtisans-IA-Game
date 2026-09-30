@@ -62,6 +62,91 @@ triplant les données), donc plus de parties de greedy, bon marché à générer
 
 ---
 
+## [2026-09-30] Cycle 6 — Augmentation par permutation des familles
+
+*Exploratoire, seuils écrits avant mesure. Motif : le goulot identifié au cycle 3 est le nombre de
+parties **distinctes** (le réseau surapprend dès 2-3 époques), et la règle C18 dit que les familles
+sont interchangeables. `iteration.py` faisait cette augmentation, `statuts.py` non.*
+
+**Outil.** `statuts.indices_permutation` : permute les familles **directement sur les tenseurs
+stockés** (8 blocs sur 18 sont indexés par famille), sans rejouer de partie ; une permutation
+aléatoire par échantillon et par lot, sur GPU. Vérifié égal bit à bit au tenseur de l'état dont on
+a renommé les familles (`permuter_familles`) : 588 tenseurs du jeu complet, plus un test dans
+`tests/experiences/test_statuts.py` (avec témoin positif).
+
+**Hypothèse H6.** À données égales (36 000 parties de greedy), entraîner **avec** augmentation
+(6 époques, la perte n'étant plus un surapprentissage à 2) donne un meilleur agent que sans.
+Référence : les 3 réseaux « avec statuts » du contrôle des graines, agent statuts ×1 + valeur ×10,
+contre 2 greedys sur les donnes 6 400 000+ (450 donnes) : **moyenne +0,359**, écart-type entre
+graines 0,015. Test : 3 graines avec augmentation, **mêmes donnes**, mêmes options.
+
+| | Confirmée si | Infirmée si |
+|---|---|---|
+| H6 | moyenne des 3 graines ≥ +0,03 au-dessus de +0,359 (soit > 2 écarts-types de la moyenne de 3) **et** R² du gain sur le test supérieur à celui du cycle 1 (0,099) | moyenne < +0,379 ou R² du gain ≤ 0,099 |
+
+**Suite conditionnelle (non engagée).** Si confirmée : refaire avec les 108 000 parties.
+
+**Résultat.** *(à venir)*
+
+---
+
+## [2026-09-30] Cycle 5 — Deux réglages gratuits : l'ensemble des graines, le poids de l'écart
+
+*Exploratoire, seuils écrits avant mesure. Travail sur `main` (plus de branche).*
+
+**Hypothèse H5a (ensemble).** Moyenner les sorties des 3 réseaux « avec statuts » du contrôle des
+graines (`experiences/modeles/graines/avec_1..3.pt`, 36 000 parties) bat en moyenne un réseau seul.
+Mesure : l'ensemble contre 2 greedys et chacun des 3 réseaux seuls, **sur les mêmes donnes neuves**
+(450 donnes, 6 500 000+), écart apparié. **Confirmée** si l'ensemble dépasse la moyenne des 3
+seuls d'au moins +0,02 avec borne basse de l'écart apparié à 99 % > 0 ; **infirmée** si l'écart
+est < +0,01.
+
+**Hypothèse H5b (poids de l'écart).** Le poids `poids_ecart` de la tête d'écart dans le score de
+l'agent (0,05 depuis les débuts, hérité de `V`, jamais réglé pour le réseau à statuts) n'est pas
+optimal. Balayage {0 ; 0,05 ; 0,2 ; 0,5 ; 1} pour `statuts_s3_e2` (statuts ×1 + valeur ×10),
+**exploration sur 6 500 000+, confirmation du meilleur réglage sur 6 600 000+** (450 donnes,
+appariée au réglage par défaut). **Retenu** si l'écart apparié de confirmation est ≥ +0,03 avec
+borne basse > 0 ; sinon le réglage reste à 0,05.
+
+**Résultat.** Donnes 6 500 000+, 450 donnes (1 350 parties) par ligne ;
+`experiences/resultats/cycle5_arene.jsonl`.
+
+| Agent (statuts ×1 + valeur ×10) | Gain contre 2 greedys | IC 99 % |
+|---|---:|---|
+| graine 1 (36 000 parties) | +0,389 | [+0,343 ; +0,435] |
+| graine 2 | +0,355 | [+0,312 ; +0,400] |
+| graine 3 | +0,374 | [+0,329 ; +0,416] |
+| **ensemble des 3** | **+0,397** | [+0,353 ; +0,439] |
+| `statuts_s3_e2`, `poids_ecart` = 0 | +0,456 | [+0,411 ; +0,500] |
+| `statuts_s3_e2`, 0,05 (défaut) | +0,458 | [+0,411 ; +0,504] |
+| `statuts_s3_e2`, 0,2 | +0,449 | [+0,402 ; +0,497] |
+| `statuts_s3_e2`, 0,5 | +0,450 | [+0,405 ; +0,494] |
+| `statuts_s3_e2`, 1 | +0,456 | [+0,410 ; +0,502] |
+
+- **H5a : NON TRANCHÉE, tendance positive.** Ensemble moins moyenne des 3 seuls :
+  **+0,025 [−0,022 ; +0,071]** (apparié par donne). Le seuil de +0,02 est dépassé par l'estimation,
+  mais la borne basse est négative : ni confirmée, ni infirmée (le seuil d'infirmation, < +0,01, n'est
+  pas atteint non plus). Par graine : +0,008, +0,042, +0,024. Cohérent avec l'attente
+  (+0,02 à +0,04), mais il faudrait ~1 500 donnes pour le trancher.
+- **H5b : INFIRMÉE.** Aucun réglage de `poids_ecart` ne se distingue du défaut (écarts appariés
+  de −0,009 à −0,002, tous IC à cheval sur 0). L'agent y est insensible : le réglage reste à
+  0,05. Le balayage n'a pas été confirmé sur 6 600 000+ puisque aucun candidat n'a franchi l'exploration.
+- Contrôle de cohérence : `statuts_s3_e2` fait +0,458 sur les donnes 6 500 000+ contre +0,455 sur
+  6 000 000+ (cycle 3) ; les 3 graines de 36 000 parties font +0,373 en moyenne contre +0,359
+  sur 6 400 000+ : le bruit de plage de donnes est d'environ ±0,015.
+
+**Décision.** Aucun gain *établi* ici. L'ensemble reste une piste peu coûteuse (+0,025 attendu)
+mais il multiplie par 3 le coût de chaque décision ; on ne le retient pas tant qu'il n'est pas
+tranché, et il faut de toute façon 3 réseaux entraînés à chaque fois.
+
+**Incident.** Ces mesures ont saturé le processeur de l'auteur (99 %, machine inutilisable). Correctif
+le même jour : tous les calculs parallèles utilisent désormais la moitié des cœurs en priorité
+minimale (`arene.WORKERS_DEFAUT`, `nice 19` dans chaque processus de calcul), vérifié : 6 processus
+à `nice 19`. Noté dans `experiences/README.md` §6.
+
+
+---
+
 ## [2026-09-30] Ménage du dépôt — une seule branche, rien de perdu
 
 **Décision de l'auteur :** « je veux un `main` avec tout documenté, pas de branche à la fin ».

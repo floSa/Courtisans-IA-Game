@@ -64,7 +64,7 @@ l'entraînement. Prévoir ~14 Go de disque pour les données.
 ```bash
 export COURTISANS_INSTANCE=complete
 
-# Données : parties de greedy (ε = 0,1), ~147 vues par partie, 12 000 parties ≈ 3 min sur 11 processus
+# Données : parties de greedy (ε = 0,1), ~147 vues par partie, 12 000 parties ≈ 6 min sur 6 processus de priorité minimale
 uv run python -m experiences.statuts generer --parties 12000 --sortie experiences/donnees/statuts/greedy_12k.npz
 uv run python -m experiences.statuts generer --parties 24000 --depart 9012000 --sortie experiences/donnees/statuts/greedy_24k.npz
 
@@ -153,6 +153,9 @@ l'écart apparié (`apparie.py`).
 
 ## 6. Pièges rencontrés
 
+- **La machine de l'auteur doit rester utilisable.** Tous les calculs parallèles utilisent par défaut
+  la **moitié des cœurs** (`arene.WORKERS_DEFAUT`) en **priorité minimale** (`nice 19`). Ne pas
+  remettre 11 processus : c'était le réglage des premiers jours et il saturait le processeur à 99 %.
 - `pgrep -f "motif"` se reconnaît lui-même dans un `sh -c` et ne rend jamais « fini » ; tester
   avec `ps aux | grep "python.*motif" | grep -v grep`.
 - Un `nohup … &` dans un outil rend la main tout de suite : la notification de fin concerne le

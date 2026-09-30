@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import importlib
 import json
+import os
 import random
 import statistics
 import sys
@@ -19,6 +20,15 @@ from courtisans.engine import Engine
 from experiences.config import CONFIG as ENTRAINEMENT_3J
 
 CONFIG = ENTRAINEMENT_3J
+
+#: La moitie des coeurs par defaut, en priorite minimale : les mesures tournent en arriere-plan
+#: sans geler la machine de l'auteur. Surchargeable par --workers.
+WORKERS_DEFAUT = max(1, (os.cpu_count() or 2) // 2)
+
+
+def basse_priorite():
+    """Initialiseur des processus de calcul : priorite minimale (nice 19)."""
+    os.nice(19)
 
 
 def fabrique(spec: str):
@@ -68,13 +78,13 @@ def main(argv=None):
     p.add_argument("--adv", default="experiences.pimc:greedy_rollout")
     p.add_argument("--donnes", type=int, default=100)
     p.add_argument("--depart", type=int, default=5_000_000)
-    p.add_argument("--workers", type=int, default=11)
+    p.add_argument("--workers", type=int, default=WORKERS_DEFAUT)
     p.add_argument("--sortie", default=None)
     a = p.parse_args(argv)
     t0 = time.time()
     taches = [(a.agent, a.adv, d, CONFIG) for d in range(a.depart, a.depart + a.donnes)]
     resultats = []
-    with ProcessPoolExecutor(a.workers) as ex:
+    with ProcessPoolExecutor(a.workers, initializer=basse_priorite) as ex:
         for r in ex.map(_une_donne, taches, chunksize=1):
             resultats.append(r)
     par_donne = [statistics.fmean(g for _, g, _ in res) for _, res in resultats]

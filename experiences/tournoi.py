@@ -15,7 +15,7 @@ import json
 import statistics
 from concurrent.futures import ProcessPoolExecutor
 
-from experiences.arene import _une_donne, bootstrap
+from experiences.arene import WORKERS_DEFAUT, _une_donne, basse_priorite, bootstrap
 from experiences.config import CONFIG
 
 
@@ -34,12 +34,12 @@ def main():
     ap.add_argument("agents", nargs="+")
     ap.add_argument("--donnes", type=int, default=100)
     ap.add_argument("--depart", type=int, default=5_900_000)
-    ap.add_argument("--workers", type=int, default=11)
+    ap.add_argument("--workers", type=int, default=WORKERS_DEFAUT)
     ap.add_argument("--sortie", default="experiences/resultats/tournoi.jsonl")
     a = ap.parse_args()
     paires = [(x, y) for x in a.agents for y in a.agents if x != y]
     matrice: dict[tuple[str, str], dict] = {}
-    with ProcessPoolExecutor(a.workers) as ex:
+    with ProcessPoolExecutor(a.workers, initializer=basse_priorite) as ex:
         for x, y in paires:
             taches = [(spec(x), spec(y), d, CONFIG) for d in range(a.depart, a.depart + a.donnes)]
             res = list(ex.map(_une_donne, taches, chunksize=2))

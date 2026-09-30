@@ -11,7 +11,7 @@ from concurrent.futures import ProcessPoolExecutor
 import numpy as np
 
 from courtisans.engine import Engine
-from experiences.arene import fabrique
+from experiences.arene import WORKERS_DEFAUT, basse_priorite, fabrique
 from experiences.config import CONFIG as C
 from experiences.rapide import tenseur_rapide as tenseur
 
@@ -47,14 +47,14 @@ def main():
     p.add_argument("--parties", type=int, default=40000)
     p.add_argument("--depart", type=int, default=8_000_000)
     p.add_argument("--eps", type=float, default=0.0)
-    p.add_argument("--workers", type=int, default=11)
+    p.add_argument("--workers", type=int, default=WORKERS_DEFAUT)
     p.add_argument("--sortie", required=True)
     a = p.parse_args()
     taille = 250
     taches = [(a.spec, a.depart + i, min(taille, a.parties - (i - 0)), a.eps)
               for i in range(0, a.parties, taille)]
     xs, gs, ms = [], [], []
-    with ProcessPoolExecutor(a.workers) as ex:
+    with ProcessPoolExecutor(a.workers, initializer=basse_priorite) as ex:
         for X, G, M in ex.map(_lot, taches):
             xs.append(X)
             gs.append(G)

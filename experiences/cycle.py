@@ -18,6 +18,7 @@ import subprocess
 import sys
 import time
 
+from experiences.arene import WORKERS_DEFAUT
 from experiences.statuts import entrainer, generer_contextes
 
 DOSSIER = "experiences/donnees/statuts"
@@ -61,7 +62,7 @@ def main():
                      (0.20, [A, MEILLEUR, MEILLEUR]), (0.20, [A, P, P])]
         donnees = f"{DOSSIER}/gen_{k:02d}.npz"
         depart = a.depart_generation + 100_000 * k
-        generer_contextes(contextes, a.parties, depart, 0.05, 11, donnees)
+        generer_contextes(contextes, a.parties, depart, 0.05, WORKERS_DEFAUT, donnees)
         fichiers.append(donnees)
         t2 = time.time()
         modele = f"{MODELES}/cycle2_gen_{k:02d}.pt"
