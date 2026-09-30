@@ -78,7 +78,40 @@ contre 2 greedys (600 donnes, 6 000 000+).
 |---|---|---|
 | H3 | duel ≥ +0,04 avec borne basse IC 99 % > 0, et R² du gain test ≥ 0,10 | duel ≤ +0,02 : les données ne sont plus le facteur limitant |
 
-**Résultat.** *(à venir)*
+**Résultat.** 108 000 parties de greedy, 15,9 M de vues. Le surapprentissage revient dès la
+3ᵉ époque (R² du gain sur le test : 0,110, 0,106, 0,092) ; on garde 1 et 2 époques
+(`statuts_s3_e1.pt`, `statuts_s3_e2.pt`). Sur le **même** test (fin de `greedy_b2`, jamais vu par
+les trois modèles) :
+
+| Modèle | R² du gain | R² de la tête d'écart | Précision du statut |
+|---|---:|---:|---:|
+| cycle 1 (36 000 parties, 2 époques) | 0,099 | 0,136 | 0,567 |
+| cycle 3, 1 époque | 0,116 | 0,158 | 0,573 |
+| cycle 3, 2 époques | 0,114 | 0,159 | 0,573 |
+
+Jeu (statuts ×1, valeur ×10, 600 donnes = 1 800 parties par ligne) :
+
+| Modèle | Contre 2 greedys | Duel contre l'agent du cycle 1 | Duel contre 2 × `meilleur.pt` |
+|---|---|---|---|
+| cycle 1 (rappel, donnes 6 000 000+ / 450 donnes) | +0,377 [+0,330 ; +0,425] | — | −0,009 [−0,050 ; +0,036] |
+| cycle 3, 1 époque | **+0,440** [+0,401 ; +0,480] | +0,037 [+0,000 ; +0,075] | — |
+| cycle 3, 2 époques | **+0,455** [+0,417 ; +0,493] | +0,034 [−0,004 ; +0,071] | −0,009 [−0,049 ; +0,030] |
+
+**Décision : H3 NON TRANCHÉE, tendance positive.** Le seuil de R² (≥ 0,10) est atteint ; le seuil
+du duel (≥ +0,04, borne basse > 0) ne l'est pas strictement (+0,037 avec borne basse à 0,000 ;
++0,034 avec −0,004), sans tomber dans la zone d'infirmation (≤ +0,02). Les données aident : de
++0,377 à +0,44/+0,455 contre les greedys, la meilleure mesure obtenue contre lui à ce jour.
+
+**Point d'attention : non-transitivité.** Contre `meilleur.pt`, le résultat est identique au cycle 1
+(−0,009), alors que le gain contre les greedys a grimpé de 0,08. Battre mieux le greedy n'est pas
+battre mieux `meilleur.pt` : les deux adversaires ne sont pas interchangeables, et les deux
+mesures sont à suivre à chaque cycle. Il y a un plateau commun, autour de l'égalité avec
+`meilleur.pt`, que ni la source des parties (cycle 2) ni leur nombre (cycle 3) ne fait bouger.
+
+**Impact plan.** L'agent `statuts_s3_e2` devient la référence contre le greedy. Pour dépasser
+`meilleur.pt` en duel, il faut autre chose que de la donnée : le calcul de fin de partie
+(+0,088 mesuré sur `meilleur.pt`, jamais essayé sur ce réseau), puis la recherche.
+
 
 ---
 
