@@ -23,6 +23,8 @@ gain espéré / coût.
 
 ## 1. Le « greedy probabiliste » — apprendre le **statut final des familles**
 
+> **FAIT le 30/09** (cycles 1 et 3 du journal). Le calcul du greedy probabiliste seul est moins bon que prévu (R² −0,08), mais la tête de statuts comme **cible auxiliaire** fait passer la valeur de +0,178 à +0,288, et jusqu'à +0,455 avec 108 000 parties. Voir `experiences/statuts.py`.
+
 *La piste la plus alignée avec la lecture du jeu par son auteur, et celle que je mettrais en
 premier.*
 
@@ -86,6 +88,8 @@ génération 5 à 10 fois plus lente. **Devient naturel avec le moteur rapide (�
 ---
 
 ## 3. L'IA jouable par défaut = `meilleur.pt` + fin de partie à 32 mondes
+
+> **MIS À JOUR le 30/09** (cycle 4) : l'agent de référence est désormais `statuts_s3_e2.pt` + fin de partie (`statuts=True`) : +0,470 contre 2 greedys, +0,046 [+0,001 ; +0,093] contre `meilleur.pt`.
 
 Déjà mesuré : +0,088 contre la meilleure IA seule, établi. C'est la meilleure IA **pour
 jouer** aujourd'hui, pour quelques secondes par coup et seulement au dernier tour. À exposer

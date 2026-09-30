@@ -82,7 +82,33 @@ d'au moins +0,05, et **bat `meilleur.pt`**.
 |---|---|---|
 | H4 | duel contre le réseau seul ≥ +0,05, borne basse IC 99 % > 0 ; et duel contre `meilleur.pt` avec borne basse > 0 | duel contre le réseau seul ≤ +0,02 |
 
-**Résultat.** *(à venir)*
+**Résultat.** Hybride = `statuts_s3_e2` + fin de partie (1 tour, 32 mondes, adversaires simulés par
+le réseau). ~20 s par donne de 3 parties sur 11 processus ; `experiences/resultats/cycle4_arene.jsonl`.
+
+| Adversaires | Donnes | Gain de l'hybride | IC 99 % | Victoires seules |
+|---|---|---:|---|---:|
+| 2 × `statuts_s3_e2` (le réseau seul) | 6 300 000+, 450 | **+0,099** | [+0,064 ; +0,135] | 35,0 % |
+| 2 × `meilleur.pt` | 6 200 000+, 450 | **+0,046** | [+0,001 ; +0,093] | 32,1 % |
+| 2 greedys | 6 000 000+, 300 | **+0,470** | [+0,420 ; +0,518] | 60,8 % |
+
+Rappel : le réseau seul faisait −0,009 [−0,049 ; +0,030] contre `meilleur.pt` (mêmes donnes) et
++0,455 contre les greedys (donnes 6 000 000+, 600 donnes).
+
+**Décision : H4 CONFIRMÉE, avec une réserve.** Contre le réseau seul, +0,099 est près du double du
+seuil (+0,05), borne basse nettement positive. Contre `meilleur.pt`, la borne basse est positive
+mais à +0,001 : le seuil est franchi à la limite, sur 450 donnes ; il faut un rejeu plus
+large pour parler de « bat `meilleur.pt` » sans réserve. Le gain de la fin de partie est
+plus fort ici (+0,099) que sur `meilleur.pt` (+0,088) alors que l'adversaire est plus fort.
+
+**L'agent jouable à ce jour** : `experiences.fin_de_partie:fin_de_partie` avec
+`chemin='experiences/modeles/statuts_s3_e2.pt', statuts=True, tours_fin=1, nb_mondes=32,
+rollout='valeur'`. Quelques secondes par coup, uniquement au dernier tour.
+
+**Impact plan.** Piste n° 1 (statuts) et n° 3 (agent jouable) de PISTES.md : faites. La suite
+qui a du sens, dans l'ordre : (a) rejouer le duel contre `meilleur.pt` sur plus de donnes ;
+(b) la fin de partie *dans l'entraînement* (n° 2), qui coûte trop cher en Python ; (c) le moteur
+rapide (n° 4), toujours en attente d'accord, qui débloque (b) et la recherche profonde.
+
 
 ---
 
